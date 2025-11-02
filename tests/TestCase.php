@@ -54,6 +54,15 @@ abstract class TestCase extends BaseTestCase
             $table->string('name')->nullable();
             $table->integer('job_id')->nullable();
         });
+
+        if ($schemaBuilder->hasTable('cache')) {
+            $schemaBuilder->drop('cache');
+        }
+
+        $schemaBuilder->create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+        });
     }
 
     protected function seedDatabase(): void

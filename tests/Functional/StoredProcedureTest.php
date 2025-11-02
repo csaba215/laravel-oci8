@@ -100,4 +100,72 @@ class StoredProcedureTest extends TestCase
 
         $this->assertSame($first.$last, $output);
     }
+
+    #[Test]
+    public function it_can_work_with_clobs_automatically_short()
+    {
+        $connection = $this->getConnection();
+
+        $procedureName = 'clob_demo_short';
+
+        $command = '
+            CREATE OR REPLACE PROCEDURE clob_demo_short(p1 IN CLOB, p2 OUT CLOB) AS
+            BEGIN
+                p2 := p1;
+            END;
+        ';
+
+        $connection->getPdo()->exec($command);
+
+        $input = 'hello world';
+
+        // this needs to be large enough to hold the plsql return value
+        $output = str_repeat(' ', 1000);
+
+        $bindings = [
+            'p1' => $input,
+            'p2' => [
+                'value' => &$output,
+                'type' => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT,
+            ],
+        ];
+
+        $connection->executeProcedure($procedureName, $bindings);
+
+        $this->assertSame($input, $output);
+    }
+
+//    #[Test]
+//    public function it_can_work_with_clobs_automatically_long()
+//    {
+//        $connection = $this->getConnection();
+//
+//        $procedureName = 'clob_demo_long';
+//
+//        $command = '
+//            CREATE OR REPLACE PROCEDURE clob_demo_long(p1 IN CLOB, p2 OUT CLOB) AS
+//            BEGIN
+//                p2 := p1;
+//            END;
+//        ';
+//
+//        $connection->getPdo()->exec($command);
+//
+//        $input = str_repeat('abcdefghij', 4000);
+//
+//        // this needs to be large enough to hold the plsql return value
+//        $output = str_repeat(' ', 50000);
+//
+//        $bindings = [
+//            'p1' => $input,
+//            'p2' => [
+//                'value' => &$output,
+//                'type' => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT,
+//            ],
+//        ];
+//
+//        $connection->executeProcedure($procedureName, $bindings);
+//
+//        $this->assertSame($input, $output);
+//    }
 }

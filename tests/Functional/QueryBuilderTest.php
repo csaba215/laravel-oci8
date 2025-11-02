@@ -59,6 +59,16 @@ class QueryBuilderTest extends TestCase
         $this->assertSame($lastId + 1, $id);
     }
 
+    #[Test]
+    public function it_can_insert_clob()
+    {
+        $data = ['key' => 'Foo', 'value' => str_repeat('abcdefghij', 4000)];
+
+        $this->getConnection()->table('cache')->insert($data);
+
+        $this->assertDatabaseCount('cache', 1);
+    }
+
     protected function getBuilder(): Builder
     {
         /** @var \Yajra\Oci8\Oci8Connection $connection */
