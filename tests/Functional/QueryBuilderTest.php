@@ -62,9 +62,9 @@ class QueryBuilderTest extends TestCase
     #[Test]
     public function it_can_insert_clob()
     {
-        $data = ['key' => 'Foo', 'value' => str_repeat('abcdefghij', 4000)];
+        $data = ['key' => 'Foo', 'value' => str_repeat('abcdefghij', 4000), 'expiration' => 0];
 
-        $this->getConnection()->table('cache')->insert($data);
+        $this->getConnection()->table('cache')->upsert($data, 'key');
 
         $this->assertDatabaseCount('cache', 1);
     }
