@@ -235,6 +235,11 @@ class SchemaTest extends TestCase
     #[Test]
     public function it_can_add_generated_as_column()
     {
+        // this is only supported from 12c and onward
+        if(config('database.connections.oracle.server_version') !== '12c') {
+            return;
+        }
+
         if (Schema::hasTable('generated_as_table')) {
             Schema::drop('generated_as_table');
         }
@@ -265,6 +270,11 @@ class SchemaTest extends TestCase
     #[Test]
     public function it_can_add_generated_as_on_null_column()
     {
+        // this is only supported from 12c and onward
+        if(config('database.connections.oracle.server_version') !== '12c') {
+            return;
+        }
+
         if (Schema::hasTable('generated_as_on_null_table')) {
             Schema::drop('generated_as_on_null_table');
         }
@@ -296,6 +306,11 @@ class SchemaTest extends TestCase
     #[Test]
     public function it_can_add_generated_as_always_column()
     {
+        // this is only supported from 12c and onward
+        if(config('database.connections.oracle.server_version') !== '12c') {
+            return;
+        }
+
         if (Schema::hasTable('generated_as_always_table')) {
             Schema::drop('generated_as_always_table');
         }
@@ -325,6 +340,11 @@ class SchemaTest extends TestCase
     #[Test]
     public function it_can_add_generated_as_with_options_column()
     {
+        // this is only supported from 12c and onward
+        if(config('database.connections.oracle.server_version') !== '12c') {
+            return;
+        }
+
         if (Schema::hasTable('generated_as_with_options_table')) {
             Schema::drop('generated_as_with_options_table');
         }
@@ -355,6 +375,11 @@ class SchemaTest extends TestCase
     #[Test]
     public function it_can_add_generated_as_on_null_with_options_column()
     {
+        // this is only supported from 12c and onward
+        if(config('database.connections.oracle.server_version') !== '12c') {
+            return;
+        }
+
         if (Schema::hasTable('generated_as_on_null_with_options_table')) {
             Schema::drop('generated_as_on_null_with_options_table');
         }
