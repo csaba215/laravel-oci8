@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - feature/generated_as
       - '*.x'
   pull_request:
   schedule:
