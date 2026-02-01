@@ -49,6 +49,11 @@ class DatabaseEloquentIrregularPluralTest extends LaravelTestCase
 
     protected function tearDown(): void
     {
+        if (getenv('SERVER_VERSION') !== '12c') {
+           parent::tearDown();
+           return;
+        }
+
         $this->schema()->drop('irregular_plural_tokens');
         $this->schema()->drop('irregular_plural_humans');
         $this->schema()->drop('irregular_plural_human_irregular_plural_token');

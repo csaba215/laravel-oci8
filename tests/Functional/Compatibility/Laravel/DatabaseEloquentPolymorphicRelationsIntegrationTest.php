@@ -46,6 +46,11 @@ class DatabaseEloquentPolymorphicRelationsIntegrationTest extends LaravelTestCas
      */
     protected function tearDown(): void
     {
+        if (getenv('SERVER_VERSION') !== '12c') {
+            parent::tearDown();
+            return;
+        }
+
         foreach (['default'] as $connection) {
             $this->schema($connection)->drop('posts');
             $this->schema($connection)->drop('images');
