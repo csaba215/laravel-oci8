@@ -10,11 +10,11 @@ class DatabaseEloquentPolymorphicRelationsIntegrationTest extends LaravelTestCas
 {
     protected function setUp(): void
     {
-        parent::setUp();
-
-        if ($this->connection()->getConfig('server_version') !== '12c') {
+        if (getenv('SERVER_VERSION') !== '12c') {
             $this->markTestSkipped('This is only supported from 12c and onward because of too long column names.');
         }
+
+        parent::setUp();
     }
 
     protected function createSchema()
