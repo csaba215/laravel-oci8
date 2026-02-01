@@ -13,56 +13,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        $this->migrateDatabase();
-
-        $this->seedDatabase();
-    }
-
-    protected function migrateDatabase(): void
-    {
-        /** @var \Illuminate\Database\Schema\Builder $schemaBuilder */
-        $schemaBuilder = $this->app['db']->connection()->getSchemaBuilder();
-        if ($schemaBuilder->hasTable('users')) {
-            $schemaBuilder->drop('users');
-        }
-
-        $schemaBuilder->create('users', function (Blueprint $table) {
-            $table->increments('id');
-            $table->string('name');
-            $table->string('email');
-            $table->timestamps();
-        });
-
-        if ($schemaBuilder->hasTable('multi_blobs')) {
-            $schemaBuilder->drop('multi_blobs');
-        }
-
-        $schemaBuilder->create('multi_blobs', function (Blueprint $table) {
-            $table->increments('id');
-            $table->binary('blob_1')->nullable();
-            $table->binary('blob_2')->nullable();
-            $table->integer('status')->nullable();
-            $table->timestamps();
-        });
-
-        if ($schemaBuilder->hasTable('jobs')) {
-            $schemaBuilder->drop('jobs');
-        }
-
-        $schemaBuilder->create('jobs', function (Blueprint $table) {
-            $table->increments('id');
-            $table->string('name')->nullable();
-            $table->integer('job_id')->nullable();
-        });
-
-        if ($schemaBuilder->hasTable('json_test')) {
-            $schemaBuilder->drop('json_test');
-        }
-
-        $schemaBuilder->create('json_test', function (Blueprint $table) {
-            $table->id('id');
-            $table->json('options');
-        });
+        //$this->seedDatabase();
     }
 
     protected function seedDatabase(): void

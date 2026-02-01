@@ -2,13 +2,35 @@
 
 namespace Yajra\Oci8\Tests\Functional;
 
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use Yajra\Oci8\Tests\TestCase;
 
 class SessionVarsTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Schema::create('users', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('name');
+            $table->string('email');
+            $table->timestamps();
+        });
+    }
+
+    protected function tearDown(): void
+    {
+        Schema::drop('users');
+
+        parent::tearDown();
+    }
+
 
     /**
      * Configure custom sessionVars.
@@ -28,7 +50,6 @@ class SessionVarsTest extends TestCase
     #[Test]
     public function it_can_redefine_timestamp_format()
     {
-        $this->getConnection()->table('users')->truncate();
         $data = ['id' => 2, 'name' => 'Foo', 'email' => 'foo@example.com', 'created_at' => '2023-11-28 13:14:15.123456'];
 
         $this->getConnection()->table('users')->insert($data);
