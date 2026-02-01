@@ -68,9 +68,9 @@ abstract class LaravelTestCase extends BaseTestCase
                 'database' => 'postgres',
                 'username' => 'postgres',
                 'password' => 'postgres',
-            ], 'pgsql');
+            ], 'default');
 
-            $db->getDatabaseManager()->setDefaultConnection('pgsql');
+            $db->getDatabaseManager()->setDefaultConnection('default');
         } else {
             $db->addConnection([
                 'driver' => 'oracle',
@@ -81,14 +81,16 @@ abstract class LaravelTestCase extends BaseTestCase
                 'username' => 'system',
                 'password' => 'oracle',
                 'server_version' => getenv('SERVER_VERSION') ?: '11g',
-            ], 'oracle');
+            ], 'default');
 
-            $db->getDatabaseManager()->setDefaultConnection('oracle');
+            $db->getDatabaseManager()->setDefaultConnection('default');
         }
 
         $db->bootEloquent();
         $db->setAsGlobal();
 
-        $this->createSchema();
+        if (method_exists($this, 'createSchema')) {
+            $this->createSchema();
+        }
     }
 }
