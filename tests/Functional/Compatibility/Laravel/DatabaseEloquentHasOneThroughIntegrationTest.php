@@ -64,7 +64,7 @@ class DatabaseEloquentHasOneThroughIntegrationTest extends LaravelTestCase
 
     public function test_it_loads_a_default_has_one_through_relation()
     {
-        if (config('database.connections.oracle.server_version') !== '12c') {
+        if ($this->connection()->getConfig('server_version') !== '12c') {
             $this->markTestSkipped('This is only supported from 12c and onward because of too long column names.');
         }
 
