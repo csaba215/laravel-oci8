@@ -74,7 +74,7 @@ class DatabaseEloquentBelongsToManySyncReturnValueTypeTest extends LaravelTestCa
         });
 
         $user->articles->each(function (BelongsToManySyncTestTestArticle $article) {
-            $this->assertSame('0', (string) $article->pivot->visible);
+            $this->assertFalse((bool) $article->pivot->visible);
         });
     }
 
