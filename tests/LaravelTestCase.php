@@ -93,4 +93,16 @@ abstract class LaravelTestCase extends BaseTestCase
             $this->createSchema();
         }
     }
+
+    protected function tearDown(): void
+    {
+        try {
+            DB::connection('default')->disconnect();
+        } catch (\Throwable $e) {
+            // ignore if already disconnected
+        }
+
+        parent::tearDown();
+    }
+
 }
