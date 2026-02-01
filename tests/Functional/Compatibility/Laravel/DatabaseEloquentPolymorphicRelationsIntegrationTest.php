@@ -8,6 +8,15 @@ use Yajra\Oci8\Tests\LaravelTestCase;
 
 class DatabaseEloquentPolymorphicRelationsIntegrationTest extends LaravelTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if ($this->connection()->getConfig('server_version') !== '12c') {
+            $this->markTestSkipped('This is only supported from 12c and onward because of too long column names.');
+        }
+    }
+
     protected function createSchema()
     {
         $this->schema('default')->create('posts', function ($table) {

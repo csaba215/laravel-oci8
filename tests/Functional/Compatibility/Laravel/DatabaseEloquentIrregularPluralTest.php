@@ -8,6 +8,15 @@ use Yajra\Oci8\Tests\LaravelTestCase;
 
 class DatabaseEloquentIrregularPluralTest extends LaravelTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if ($this->connection()->getConfig('server_version') !== '12c') {
+            $this->markTestSkipped('This is only supported from 12c and onward because of too long column names.');
+        }
+    }
+
     public function createSchema()
     {
         $this->schema()->create('irregular_plural_humans', function ($table) {
