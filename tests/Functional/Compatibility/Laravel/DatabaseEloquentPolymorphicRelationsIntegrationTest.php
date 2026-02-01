@@ -48,6 +48,7 @@ class DatabaseEloquentPolymorphicRelationsIntegrationTest extends LaravelTestCas
     {
         if (getenv('SERVER_VERSION') !== '12c') {
             parent::tearDown();
+
             return;
         }
 

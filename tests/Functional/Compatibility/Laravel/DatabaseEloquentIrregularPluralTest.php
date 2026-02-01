@@ -50,8 +50,9 @@ class DatabaseEloquentIrregularPluralTest extends LaravelTestCase
     protected function tearDown(): void
     {
         if (getenv('SERVER_VERSION') !== '12c') {
-           parent::tearDown();
-           return;
+            parent::tearDown();
+
+            return;
         }
 
         $this->schema()->drop('irregular_plural_tokens');
