@@ -33,7 +33,6 @@ class WithTest extends TestCase
         parent::tearDown();
     }
 
-
     #[Test]
     public function it_works_with_exists()
     {

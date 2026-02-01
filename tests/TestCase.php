@@ -2,7 +2,6 @@
 
 namespace Yajra\Oci8\Tests;
 
-use Illuminate\Database\Schema\Blueprint;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use Yajra\Oci8\Oci8ServiceProvider;
 use Yajra\Oci8\Oci8ValidationServiceProvider;
@@ -13,7 +12,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        //$this->seedDatabase();
+        // $this->seedDatabase();
     }
 
     protected function seedDatabase(): void

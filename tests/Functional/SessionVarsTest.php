@@ -31,7 +31,6 @@ class SessionVarsTest extends TestCase
         parent::tearDown();
     }
 
-
     /**
      * Configure custom sessionVars.
      *
