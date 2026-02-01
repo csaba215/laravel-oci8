@@ -280,4 +280,32 @@ class OracleProcessor extends Processor
             'primary' => $items->first()['primary'],
         ])->values()->all();
     }
+
+    /**
+     * Process the results of a "select" query.
+     *
+     * @param  array  $results
+     * @return array
+     */
+    public function processSelect(Builder $query, $results)
+    {
+        $conn = $query->getConnection();
+        $oracleVersion = '11g';
+        if (method_exists($conn, 'getConfig')) {
+            $oracleVersion = $conn->getConfig('server_version') ?? '11g';
+        }
+
+        if (($oracleVersion != '12c' || $query->lock !== null) && (isset($query->limit) || isset($query->offset)) && is_array($results)) {
+            return array_map(function ($row) {
+                if (is_object($row) && isset($row->rn)) {
+                    unset($row->rn);
+                } elseif (is_array($row) && isset($row['rn'])) {
+                    unset($row['rn']);
+                }
+                return $row;
+            }, $results);
+        }
+
+        return $results;
+    }
 }
