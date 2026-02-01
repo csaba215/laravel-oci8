@@ -302,6 +302,7 @@ class OracleProcessor extends Processor
                 } elseif (is_array($row) && isset($row['rn'])) {
                     unset($row['rn']);
                 }
+
                 return $row;
             }, $results);
         }
