@@ -104,5 +104,4 @@ abstract class LaravelTestCase extends BaseTestCase
 
         parent::tearDown();
     }
-
 }
