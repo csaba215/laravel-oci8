@@ -12,7 +12,7 @@ class DatabaseEloquentIrregularPluralTest extends LaravelTestCase
     {
         parent::setUp();
 
-        if ($this->connection()->getConfig('server_version') !== '12c') {
+        if (Model::getConnectionResolver()->connection()->getConfig('server_version') !== '12c') {
             $this->markTestSkipped('This is only supported from 12c and onward because of too long column names.');
         }
     }
