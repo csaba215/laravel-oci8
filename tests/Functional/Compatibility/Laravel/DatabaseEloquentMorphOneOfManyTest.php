@@ -37,13 +37,13 @@ class DatabaseEloquentMorphOneOfManyTest extends LaravelTestCase
         parent::tearDown();
     }
 
-//    public function test_eager_loading_applies_constraints_to_inner_join_sub_query()
-//    {
-//        $product = MorphOneOfManyTestProduct::create();
-//        $relation = $product->current_state();
-//        $relation->addEagerConstraints([$product]);
-//        $this->assertSame('select MAX("states"."id") as "id_aggregate", "states"."stateful_id", "states"."stateful_type" from "states" where "states"."stateful_type" = ? and "states"."stateful_id" = ? and "states"."stateful_id" is not null and "states"."stateful_id" in (1) and "states"."stateful_type" = ? group by "states"."stateful_id", "states"."stateful_type"', $relation->getOneOfManySubQuery()->toSql());
-//    }
+    //    public function test_eager_loading_applies_constraints_to_inner_join_sub_query()
+    //    {
+    //        $product = MorphOneOfManyTestProduct::create();
+    //        $relation = $product->current_state();
+    //        $relation->addEagerConstraints([$product]);
+    //        $this->assertSame('select MAX("states"."id") as "id_aggregate", "states"."stateful_id", "states"."stateful_type" from "states" where "states"."stateful_type" = ? and "states"."stateful_id" = ? and "states"."stateful_id" is not null and "states"."stateful_id" in (1) and "states"."stateful_type" = ? group by "states"."stateful_id", "states"."stateful_type"', $relation->getOneOfManySubQuery()->toSql());
+    //    }
 
     public function test_receiving_model()
     {
