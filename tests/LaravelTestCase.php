@@ -83,11 +83,34 @@ abstract class LaravelTestCase extends BaseTestCase
                 'server_version' => getenv('SERVER_VERSION') ?: '11g',
             ], 'default');
 
+            $db->addConnection([
+                'driver' => 'oracle',
+                'host' => 'localhost',
+                'port' => 1521,
+                'database' => 'xe',
+                'service_name' => 'xe',
+                'username' => 'second_connection',
+                'password' => 'second_connection',
+                'server_version' => getenv('SERVER_VERSION') ?: '11g',
+            ], 'second_connection');
+
             $db->getDatabaseManager()->setDefaultConnection('default');
         }
 
         $db->bootEloquent();
         $db->setAsGlobal();
+        try {
+            $db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
+            $db->connection('default')->statement('CREATE USER second_connection IDENTIFIED BY second_connection DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS');
+            $db->connection('default')->statement('GRANT CREATE SESSION TO second_connection');
+            $db->connection('default')->statement('GRANT CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE TRIGGER TO second_connection');
+        } catch (\Exception $e) {
+
+            // ORA-01920 = user already exists
+            if (! str_contains($e->getMessage(), 'ORA-01920')) {
+                throw $e;
+            }
+        }
 
         if (method_exists($this, 'createSchema')) {
             $this->createSchema();
@@ -96,6 +119,14 @@ abstract class LaravelTestCase extends BaseTestCase
 
     protected function tearDown(): void
     {
+        try {
+            DB::connection('default')->statement(
+                'DROP USER second_connection CASCADE'
+            );
+        } catch (\Exception $e) {
+
+        }
+
         try {
             DB::connection('default')->disconnect();
         } catch (\Throwable $e) {
