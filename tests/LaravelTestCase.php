@@ -76,6 +76,18 @@ abstract class LaravelTestCase extends BaseTestCase
                 ],
             ], 'default');
 
+            $this->db->addConnection([
+                'driver' => 'pgsql',
+                'host' => 'localhost',
+                'port' => 5432,
+                'database' => 'second_connection',
+                'username' => 'second_connection',
+                'password' => 'second_connection',
+                'options' => [
+                    PDO::ATTR_PERSISTENT => false,
+                ],
+            ], 'second_connection');
+
             $this->db->getDatabaseManager()->setDefaultConnection('default');
         } else {
             $this->db->addConnection([
@@ -105,7 +117,11 @@ abstract class LaravelTestCase extends BaseTestCase
 
         $this->db->bootEloquent();
         $this->db->setAsGlobal();
-        if (getenv('PGSQL') !== 'true') {
+        if (getenv('PGSQL') === 'true') {
+            $this->db->connection('default')->statement('CREATE USER second_connection WITH PASSWORD \'second_connection\';');
+            $this->db->connection('default')->statement('CREATE DATABASE second_connection OWNER second_connection;');
+            $this->db->connection('default')->statement('GRANT ALL PRIVILEGES ON DATABASE second_connection TO second_connection;');
+        } else {
             try {
                 try {
                     $this->db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
@@ -143,6 +159,7 @@ abstract class LaravelTestCase extends BaseTestCase
         }
 
         $this->db->connection('default')->disconnect();
+        $this->db->connection('second_connection')->disconnect();
 
         parent::tearDown();
     }
