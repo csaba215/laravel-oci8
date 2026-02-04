@@ -11,6 +11,7 @@ use Yajra\Oci8\Oci8Connection;
 
 abstract class LaravelTestCase extends BaseTestCase
 {
+    private $db;
     protected function setUp(): void
     {
         parent::setUp();
@@ -59,10 +60,10 @@ abstract class LaravelTestCase extends BaseTestCase
             return $db;
         });
 
-        $db = new DB;
+        $this->db = new DB;
 
         if (getenv('PGSQL') === 'true') {
-            $db->addConnection([
+            $this->db->addConnection([
                 'driver' => 'pgsql',
                 'host' => 'localhost',
                 'port' => 5432,
@@ -74,9 +75,9 @@ abstract class LaravelTestCase extends BaseTestCase
                 ],
             ], 'default');
 
-            $db->getDatabaseManager()->setDefaultConnection('default');
+            $this->db->getDatabaseManager()->setDefaultConnection('default');
         } else {
-            $db->addConnection([
+            $this->db->addConnection([
                 'driver' => 'oracle',
                 'host' => 'localhost',
                 'port' => 1521,
@@ -87,7 +88,7 @@ abstract class LaravelTestCase extends BaseTestCase
                 'server_version' => getenv('SERVER_VERSION') ?: '11g',
             ], 'default');
 
-            $db->addConnection([
+            $this->db->addConnection([
                 'driver' => 'oracle',
                 'host' => 'localhost',
                 'port' => 1521,
@@ -98,23 +99,23 @@ abstract class LaravelTestCase extends BaseTestCase
                 'server_version' => getenv('SERVER_VERSION') ?: '11g',
             ], 'second_connection');
 
-            $db->getDatabaseManager()->setDefaultConnection('default');
+            $this->db->getDatabaseManager()->setDefaultConnection('default');
         }
 
-        $db->bootEloquent();
-        $db->setAsGlobal();
+        $this->db->bootEloquent();
+        $this->db->setAsGlobal();
         try {
             try {
-                $db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
+                $this->db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
             } catch (\Illuminate\Database\QueryException $e) {
                 // ORA-02248 = invalid option for ALTER SESSION (11g)
                 if (! str_contains($e->getMessage(), 'ORA-02248')) {
                     throw $e;
                 }
             }
-            $db->connection('default')->statement('CREATE USER second_connection IDENTIFIED BY second_connection DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS');
-            $db->connection('default')->statement('GRANT CREATE SESSION TO second_connection');
-            $db->connection('default')->statement('GRANT CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE TRIGGER TO second_connection');
+            $this->db->connection('default')->statement('CREATE USER second_connection IDENTIFIED BY second_connection DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS');
+            $this->db->connection('default')->statement('GRANT CREATE SESSION TO second_connection');
+            $this->db->connection('default')->statement('GRANT CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE TRIGGER TO second_connection');
         } catch (\Exception $e) {
 
             // ORA-01920 = user already exists
@@ -138,11 +139,7 @@ abstract class LaravelTestCase extends BaseTestCase
 
         }
 
-        try {
-            DB::connection('default')->disconnect();
-        } catch (\Throwable $e) {
-            // ignore if already disconnected
-        }
+        $this->db->connection('default')->disconnect();
 
         parent::tearDown();
     }
