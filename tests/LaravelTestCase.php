@@ -105,23 +105,25 @@ abstract class LaravelTestCase extends BaseTestCase
 
         $this->db->bootEloquent();
         $this->db->setAsGlobal();
-        try {
+        if(getenv('PGSQL') !== 'true') {
             try {
-                $this->db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
-            } catch (\Illuminate\Database\QueryException $e) {
-                // ORA-02248 = invalid option for ALTER SESSION (11g)
-                if (! str_contains($e->getMessage(), 'ORA-02248')) {
+                try {
+                    $this->db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // ORA-02248 = invalid option for ALTER SESSION (11g)
+                    if (! str_contains($e->getMessage(), 'ORA-02248')) {
+                        throw $e;
+                    }
+                }
+                $this->db->connection('default')->statement('CREATE USER second_connection IDENTIFIED BY second_connection DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS');
+                $this->db->connection('default')->statement('GRANT CREATE SESSION TO second_connection');
+                $this->db->connection('default')->statement('GRANT CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE TRIGGER TO second_connection');
+            } catch (\Exception $e) {
+
+                // ORA-01920 = user already exists
+                if (! str_contains($e->getMessage(), 'ORA-01920')) {
                     throw $e;
                 }
-            }
-            $this->db->connection('default')->statement('CREATE USER second_connection IDENTIFIED BY second_connection DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS');
-            $this->db->connection('default')->statement('GRANT CREATE SESSION TO second_connection');
-            $this->db->connection('default')->statement('GRANT CREATE TABLE, CREATE SEQUENCE, CREATE VIEW, CREATE TRIGGER TO second_connection');
-        } catch (\Exception $e) {
-
-            // ORA-01920 = user already exists
-            if (! str_contains($e->getMessage(), 'ORA-01920')) {
-                throw $e;
             }
         }
 
