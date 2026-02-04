@@ -118,9 +118,13 @@ abstract class LaravelTestCase extends BaseTestCase
         $this->db->bootEloquent();
         $this->db->setAsGlobal();
         if (getenv('PGSQL') === 'true') {
-            $this->db->connection('default')->statement('CREATE USER second_connection WITH PASSWORD \'second_connection\';');
-            $this->db->connection('default')->statement('CREATE DATABASE second_connection OWNER second_connection;');
-            $this->db->connection('default')->statement('GRANT ALL PRIVILEGES ON DATABASE second_connection TO second_connection;');
+            try {
+                $this->db->connection('default')->unprepared('CREATE USER second_connection WITH PASSWORD \'second_connection\';');
+                $this->db->connection('default')->unprepared('CREATE DATABASE second_connection OWNER second_connection;');
+                $this->db->connection('default')->unprepared('GRANT ALL PRIVILEGES ON DATABASE second_connection TO second_connection;');
+            } catch (\PDOException $e) {
+
+            }
         } else {
             try {
                 try {
