@@ -105,7 +105,7 @@ abstract class LaravelTestCase extends BaseTestCase
 
         $this->db->bootEloquent();
         $this->db->setAsGlobal();
-        if(getenv('PGSQL') !== 'true') {
+        if (getenv('PGSQL') !== 'true') {
             try {
                 try {
                     $this->db->connection('default')->statement('ALTER SESSION SET "_ORACLE_SCRIPT" = true');
