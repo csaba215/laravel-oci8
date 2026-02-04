@@ -12,6 +12,7 @@ use Yajra\Oci8\Oci8Connection;
 abstract class LaravelTestCase extends BaseTestCase
 {
     private $db;
+
     protected function setUp(): void
     {
         parent::setUp();
