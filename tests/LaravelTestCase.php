@@ -4,6 +4,7 @@ namespace Yajra\Oci8\Tests;
 
 use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Connection;
+use PDO;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use Yajra\Oci8\Connectors\OracleConnector as Connector;
 use Yajra\Oci8\Oci8Connection;
@@ -68,6 +69,9 @@ abstract class LaravelTestCase extends BaseTestCase
                 'database' => 'postgres',
                 'username' => 'postgres',
                 'password' => 'postgres',
+                'options' => [
+                    PDO::ATTR_PERSISTENT => false,
+                ],
             ], 'default');
 
             $db->getDatabaseManager()->setDefaultConnection('default');
