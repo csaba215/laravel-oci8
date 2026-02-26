@@ -617,7 +617,7 @@ class DatabaseEloquentFactoryTest extends LaravelTestCase
     public function test_resolve_nested_model_name_from_factory()
     {
         Container::getInstance()->instance(Application::class, $app = m::mock(Application::class));
-        $app->shouldReceive('getNamespace')->andReturn('Yajra\\Oci8\\Tests\\Functional\\Compatibility\\Laravel\\Fixtures\\Models\\Money\\Price');
+        $app->shouldReceive('getNamespace')->andReturn('Yajra\\Oci8\\Tests\\Functional\\Compatibility\\Laravel\\Fixtures\\Models\\Money\\');
 
         Factory::useNamespace('Yajra\\Oci8\\Tests\\Functional\\Compatibility\\Laravel\\Fixtures\\Factories\\');
 
