@@ -6,9 +6,11 @@ use DateTime;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Query\Processors\Processor;
 use PDO;
 use PDOStatement;
+use Throwable;
 
 class OracleProcessor extends Processor
 {
@@ -32,7 +34,12 @@ class OracleProcessor extends Processor
         $values = $this->incrementBySequence($values, $sequence);
         $parameter = $this->bindValues($query, $values, $statement, $parameter);
         $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
-        $statement->execute();
+
+        try {
+            $statement->execute();
+        } catch (Throwable $e) {
+            throw new QueryException($connection->getName(), $sql, $connection->prepareBindings($values), $e);
+        }
 
         $connection->logQuery($sql, $values, $this->getElapsedTime($start));
 
