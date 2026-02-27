@@ -2,6 +2,7 @@
 
 namespace Yajra\Oci8;
 
+use Exception;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Str;
 use PDO;
@@ -352,6 +353,16 @@ class Oci8Connection extends Connection
     protected function getDefaultPostProcessor(): Processor
     {
         return new Processor;
+    }
+
+    /**
+     * Determine if the given database exception was caused by a unique constraint violation.
+     *
+     * @param  \Exception  $exception
+     */
+    protected function isUniqueConstraintError(Exception $exception): bool
+    {
+        return (bool) preg_match('/ORA-00001:/i', $exception->getMessage());
     }
 
     /**

@@ -8,6 +8,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Query\Processors\Processor;
+use Illuminate\Database\UniqueConstraintViolationException;
 use PDO;
 use PDOStatement;
 use Throwable;
@@ -38,6 +39,15 @@ class OracleProcessor extends Processor
         try {
             $statement->execute();
         } catch (Throwable $e) {
+            if (preg_match('/ORA-00001:/i', $e->getMessage())) {
+                throw new UniqueConstraintViolationException(
+                    $connection->getName(),
+                    $sql,
+                    $connection->prepareBindings($values),
+                    $e
+                );
+            }
+
             throw new QueryException($connection->getName(), $sql, $connection->prepareBindings($values), $e);
         }
 
