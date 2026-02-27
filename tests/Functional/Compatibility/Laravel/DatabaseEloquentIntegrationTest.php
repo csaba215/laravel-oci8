@@ -397,7 +397,7 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
             ['id' => 4, 'email' => 'foo@gmail.com'],
         ]);
 
-        $query = EloquentTestUser::groupBy('email')->getQuery();
+        $query = EloquentTestUser::select('email')->groupBy('email')->getQuery();
 
         $this->assertEquals(3, $query->getCountForPagination());
     }
