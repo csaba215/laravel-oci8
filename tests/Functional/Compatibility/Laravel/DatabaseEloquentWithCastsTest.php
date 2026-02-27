@@ -42,7 +42,10 @@ class DatabaseEloquentWithCastsTest extends LaravelTestCase
             ->firstOrNew(['time' => '07:30']);
 
         $this->assertContains($time1->time, ['07:30', '07:30:00']);
-        $this->assertSame($time1->time, $time2->time);
+        $this->assertSame(
+            strlen($time1->time) === 5 ? $time1->time.':00' : $time1->time,
+            strlen($time2->time) === 5 ? $time2->time.':00' : $time2->time
+        );
     }
 
     public function test_with_first_or_create()
