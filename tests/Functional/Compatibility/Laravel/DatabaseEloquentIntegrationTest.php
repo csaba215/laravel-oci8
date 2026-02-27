@@ -168,12 +168,26 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
     protected function tearDown(): void
     {
         foreach (['default', 'second_connection'] as $connection) {
-            $this->schema($connection)->drop('users');
-            $this->schema($connection)->drop('friends');
-            $this->schema($connection)->drop('posts');
-            $this->schema($connection)->drop('friend_levels');
-            $this->schema($connection)->drop('photos');
+            $this->schema($connection)->dropIfExists('eloquent_test_achievement_eloquent_test_user');
+            $this->schema($connection)->dropIfExists('achievements');
+            $this->schema($connection)->dropIfExists('categories');
+            $this->schema($connection)->dropIfExists('taggables');
+            $this->schema($connection)->dropIfExists('tags');
+            $this->schema($connection)->dropIfExists('soft_deleted_users');
+            $this->schema($connection)->dropIfExists('photos');
+            $this->schema($connection)->dropIfExists('friend_levels');
+            $this->schema($connection)->dropIfExists('comments');
+            $this->schema($connection)->dropIfExists('posts');
+            $this->schema($connection)->dropIfExists('friends');
+            $this->schema($connection)->dropIfExists('unique_users');
+            $this->schema($connection)->dropIfExists('users');
         }
+        $this->schema('default')->dropIfExists('users_having_uuids');
+        $this->schema('default')->dropIfExists('users_with_space_in_column_name');
+        $this->schema('default')->dropIfExists('with_json');
+        $this->schema('default')->dropIfExists('test_orders');
+        $this->schema('second_connection')->dropIfExists('non_incrementing_users');
+        $this->schema('second_connection')->dropIfExists('test_items');
 
         Relation::morphMap([], false);
         Eloquent::unsetConnectionResolver();
