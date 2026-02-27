@@ -51,12 +51,15 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
             $table->timestamps();
         });
 
-        $this->schema('default')->create('users_with_space_in_column_name', function ($table) {
-            $table->increments('id');
-            $table->string('name')->nullable();
-            $table->string('email address');
-            $table->timestamps();
-        });
+        if (! ($this->connection('default')->getDriverName() === 'oracle'
+            && $this->connection('default')->isVersionBelow('12c'))) {
+            $this->schema('default')->create('users_with_space_in_column_name', function ($table) {
+                $table->increments('id');
+                $table->string('name')->nullable();
+                $table->string('email address');
+                $table->timestamps();
+            });
+        }
 
         $this->schema()->create('users_having_uuids', function (Blueprint $table) {
             $table->id();
@@ -999,6 +1002,11 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
 
     public function test_pluck_with_column_name_containing_a_space()
     {
+        if ($this->connection('default')->getDriverName() === 'oracle'
+            && $this->connection('default')->isVersionBelow('12c')) {
+            $this->markTestSkipped('This is only supported from 12c and onward because of too long identifier names.');
+        }
+
         EloquentTestUserWithSpaceInColumnName::insert([
             ['id' => 1, 'email address' => 'taylorotwell@gmail.com'],
             ['id' => 2, 'email address' => 'abigailotwell@gmail.com'],
