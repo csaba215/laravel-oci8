@@ -41,7 +41,7 @@ class DatabaseEloquentWithCastsTest extends LaravelTestCase
         $time2 = Time::query()->withCasts(['time' => 'string'])
             ->firstOrNew(['time' => '07:30']);
 
-        $this->assertSame('07:30:00', $time1->time);
+        $this->assertSame('07:30', $time1->time);
         $this->assertSame($time1->time, $time2->time);
     }
 
