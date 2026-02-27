@@ -1699,7 +1699,7 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
 
     public function test_save_or_fail()
     {
-        $date = '1970-01-01 00:00:00';
+        $date = '2001-01-01 00:00:00';
         $post = new EloquentTestPost([
             'user_id' => 1, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date,
         ]);
@@ -1729,7 +1729,7 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
         $this->expectException(QueryException::class);
         $this->expectExceptionMessage('SQLSTATE[23000]:');
 
-        $date = '1970-01-01 00:00:00';
+        $date = '2001-01-01 00:00:00';
         EloquentTestPost::create([
             'id' => 1, 'user_id' => 1, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date,
         ]);
@@ -1743,7 +1743,7 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
 
     public function test_multi_inserts_with_different_values()
     {
-        $date = '1970-01-01 00:00:00';
+        $date = '2001-01-01 00:00:00';
         $result = EloquentTestPost::insert([
             ['user_id' => 1, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date],
             ['user_id' => 2, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date],
@@ -1755,7 +1755,7 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
 
     public function test_multi_inserts_with_same_values()
     {
-        $date = '1970-01-01 00:00:00';
+        $date = '2001-01-01 00:00:00';
         $result = EloquentTestPost::insert([
             ['user_id' => 1, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date],
             ['user_id' => 1, 'name' => 'Post', 'created_at' => $date, 'updated_at' => $date],
