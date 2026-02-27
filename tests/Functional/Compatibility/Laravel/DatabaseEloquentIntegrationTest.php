@@ -153,11 +153,13 @@ class DatabaseEloquentIntegrationTest extends LaravelTestCase
                 $table->increments('id');
                 $table->integer('status')->nullable();
             });
-
-            $this->schema($connection)->create('eloquent_test_achievement_eloquent_test_user', function ($table) {
-                $table->integer('eloquent_test_achievement_id');
-                $table->integer('eloquent_test_user_id');
-            });
+            if (! ($this->connection('default')->getDriverName() === 'oracle'
+                && $this->connection('default')->isVersionBelow('12c'))) {
+                $this->schema($connection)->create('eloquent_test_achievement_eloquent_test_user', function ($table) {
+                    $table->integer('eloquent_test_achievement_id');
+                    $table->integer('eloquent_test_user_id');
+                });
+            }
         }
 
         $this->schema($connection)->create('non_incrementing_users', function ($table) {
