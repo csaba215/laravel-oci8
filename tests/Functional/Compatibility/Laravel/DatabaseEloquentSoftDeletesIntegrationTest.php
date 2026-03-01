@@ -18,23 +18,6 @@ use Yajra\Oci8\Tests\LaravelTestCase;
 
 class DatabaseEloquentSoftDeletesIntegrationTest extends LaravelTestCase
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        $db = new DB;
-
-        $db->addConnection([
-            'driver' => 'sqlite',
-            'database' => ':memory:',
-        ]);
-
-        $db->bootEloquent();
-        $db->setAsGlobal();
-
-        $this->createSchema();
-    }
-
     /**
      * Setup the database schema.
      *
