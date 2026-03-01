@@ -96,6 +96,8 @@ class DatabaseEloquentSoftDeletesIntegrationTest extends LaravelTestCase
         $this->schema()->drop('users');
         $this->schema()->drop('posts');
         $this->schema()->drop('comments');
+        $this->schema()->drop('addresses');
+        $this->schema()->drop('groups');
 
         parent::tearDown();
     }
