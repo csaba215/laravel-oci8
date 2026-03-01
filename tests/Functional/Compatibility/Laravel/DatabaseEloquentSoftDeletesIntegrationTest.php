@@ -4,7 +4,6 @@ namespace Yajra\Oci8\Tests\Functional\Compatibility\Laravel;
 
 use BadMethodCallException;
 use Exception;
-use Illuminate\Database\Capsule\Manager as DB;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -569,17 +568,17 @@ class DatabaseEloquentSoftDeletesIntegrationTest extends LaravelTestCase
         $this->assertCount(1, $abigail->posts()->withTrashed()->get());
     }
 
-//    public function test_relation_to_sql_applies_soft_delete()
-//    {
-//        $this->createUsers();
-//
-//        $abigail = SoftDeletesTestUser::where('email', 'abigailotwell@gmail.com')->first();
-//
-//        $this->assertSame(
-//            'select * from "posts" where "posts"."user_id" = ? and "posts"."user_id" is not null and "posts"."deleted_at" is null',
-//            $abigail->posts()->toSql()
-//        );
-//    }
+    //    public function test_relation_to_sql_applies_soft_delete()
+    //    {
+    //        $this->createUsers();
+    //
+    //        $abigail = SoftDeletesTestUser::where('email', 'abigailotwell@gmail.com')->first();
+    //
+    //        $this->assertSame(
+    //            'select * from "posts" where "posts"."user_id" = ? and "posts"."user_id" is not null and "posts"."deleted_at" is null',
+    //            $abigail->posts()->toSql()
+    //        );
+    //    }
 
     public function test_relation_exists_and_doesnt_exist_honors_soft_delete()
     {

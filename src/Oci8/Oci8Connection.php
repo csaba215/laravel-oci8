@@ -357,8 +357,6 @@ class Oci8Connection extends Connection
 
     /**
      * Determine if the given database exception was caused by a unique constraint violation.
-     *
-     * @param  \Exception  $exception
      */
     protected function isUniqueConstraintError(Exception $exception): bool
     {
