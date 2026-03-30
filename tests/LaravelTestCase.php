@@ -42,8 +42,8 @@ abstract class LaravelTestCase extends BaseTestCase
             $this->db->addConnection($this->oracleConfig(), 'default');
             $this->db->addConnection(
                 $this->oracleConfig([
-                    'username' => 'second_connection',
-                    'password' => 'second_connection',
+                    'username' => $this->secondOracleUsername(),
+                    'password' => $this->secondOraclePassword(),
                 ]),
                 'second_connection'
             );

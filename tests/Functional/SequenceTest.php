@@ -39,6 +39,10 @@ class SequenceTest extends TestCase
         /** @var Oci8Connection $connection */
         $connection = $this->getConnection();
 
+        if ($this->usesRestrictedOracleUserManagement()) {
+            $this->markTestSkipped('Autonomous Oracle jobs do not allow creating or granting privileges to additional users from the test connection.');
+        }
+
         try {
             $connection->statement('alter session set "_oracle_script"=true');
             $connection->statement('drop user demo cascade');
@@ -75,6 +79,11 @@ class SequenceTest extends TestCase
     {
         /** @var Oci8Connection $connection */
         $connection = $this->getConnection();
+
+        if ($this->usesRestrictedOracleUserManagement()) {
+            $this->markTestSkipped('Autonomous Oracle jobs do not allow creating or granting privileges to additional users from the test connection.');
+        }
+
         try {
             $connection->statement('alter session set "_oracle_script"=true');
             $connection->statement('drop user demo cascade');

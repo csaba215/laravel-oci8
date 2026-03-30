@@ -42,4 +42,9 @@ abstract class TestCase extends BaseTestCase
             Oci8ValidationServiceProvider::class,
         ];
     }
+
+    protected function usesRestrictedOracleUserManagement(): bool
+    {
+        return in_array($this->serverVersion(), ['19c', '23ai'], true);
+    }
 }

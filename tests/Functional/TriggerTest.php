@@ -35,17 +35,17 @@ class TriggerTest extends TestCase
         /** @var Oci8Connection $connection */
         $connection = DB::connection();
 
+        if ($this->usesRestrictedOracleUserManagement()) {
+            $this->markTestSkipped('Autonomous Oracle jobs do not allow creating additional users from the test connection.');
+        }
+
         try {
-            $connection->statement('alter session set "_oracle_script"=true');
             $connection->statement('drop user issue905 cascade');
         } catch (\Exception) {
         }
 
-        try {
-            $connection->statement('grant all privileges to issue905 identified by oracle container=ALL');
-        } catch (\Exception) {
-            $connection->statement('grant all privileges to issue905 identified by oracle');
-        }
+        $connection->statement('create user issue905 identified by "Issue905_123!"');
+        $connection->statement('grant dba to issue905');
 
         $connection->setSchemaPrefix('issue905');
         $connection->setTablePrefix('my_');
