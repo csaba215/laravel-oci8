@@ -33,6 +33,10 @@ abstract class TestCase extends BaseTestCase
 
         $app['config']->set('database.default', 'oracle');
         $app['config']->set('database.connections.oracle', $this->oracleConfig());
+        $app['config']->set('database.connections.second_connection', $this->oracleConfig([
+            'username' => $this->secondOracleUsername(),
+            'password' => $this->secondOraclePassword(),
+        ]));
     }
 
     protected function getPackageProviders($app): array
@@ -41,10 +45,5 @@ abstract class TestCase extends BaseTestCase
             Oci8ServiceProvider::class,
             Oci8ValidationServiceProvider::class,
         ];
-    }
-
-    protected function usesRestrictedOracleUserManagement(): bool
-    {
-        return in_array($this->serverVersion(), ['19c', '23ai'], true);
     }
 }
