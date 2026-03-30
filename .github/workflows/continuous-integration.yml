@@ -76,7 +76,7 @@ jobs:
             LOGIN="system/oracle@FREEPDB1"
           else
             SQLPLUS_PATH="sqlplus"
-            ORACLE_ENV=""
+            ORACLE_ENV="export TNS_ADMIN=/u01/app/oracle/wallets/tls_wallet;"
             LOGIN="admin/SecureDb1234@myatp_low"
           fi
 
