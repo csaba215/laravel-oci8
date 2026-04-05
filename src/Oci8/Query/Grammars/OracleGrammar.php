@@ -18,6 +18,15 @@ class OracleGrammar extends Grammar
     use OracleReservedWords;
 
     /**
+     * The grammar specific bitwise operators supported by Oracle.
+     *
+     * @var string[]
+     */
+    protected $bitwiseOperators = [
+        '&',
+    ];
+
+    /**
      * The keyword identifier wrapper format.
      */
     protected string $wrapper = '%s';
@@ -646,6 +655,19 @@ class OracleGrammar extends Grammar
     }
 
     /**
+     * Compile a bitwise operator where clause.
+     */
+    protected function whereBitwise(Builder $query, $where): string
+    {
+        $value = $this->parameter($where['value']);
+
+        return match ($where['operator']) {
+            '&' => 'BITAND('.$this->wrap($where['column']).', '.$value.') != 0',
+            default => parent::whereBitwise($query, $where),
+        };
+    }
+
+    /**
      * Compile a "where fulltext" clause.
      *
      * @param  array  $where
@@ -674,6 +696,32 @@ class OracleGrammar extends Grammar
         $this->labelSearchFullText++;
 
         return $fullTextClause;
+    }
+
+    /**
+     * Compile a single having clause.
+     */
+    protected function compileHaving(array $having)
+    {
+        if ($having['type'] === 'Bitwise') {
+            return $this->compileHavingBitwise($having);
+        }
+
+        return parent::compileHaving($having);
+    }
+
+    /**
+     * Compile a having clause involving a bitwise operator.
+     */
+    protected function compileHavingBitwise($having): string
+    {
+        $column = $this->wrap($having['column']);
+        $parameter = $this->parameter($having['value']);
+
+        return match ($having['operator']) {
+            '&' => 'BITAND('.$column.', '.$parameter.') != 0',
+            default => '('.$column.' '.$having['operator'].' '.$parameter.') != 0',
+        };
     }
 
     private function resolveClause($column, $values, $type): string

@@ -1209,6 +1209,22 @@ class Oci8QueryBuilderTest extends TestCase
         $this->assertSame('select * from "USERS" having "EMAIL" = ? or "EMAIL" = ?', $builder->toSql());
     }
 
+    public function test_bitwise_where()
+    {
+        $builder = $this->getBuilder();
+        $builder->select('*')->from('users')->where('flags', '&', 4);
+
+        $this->assertEquals('select * from "USERS" where BITAND("FLAGS", ?) != 0', $builder->toSql());
+    }
+
+    public function test_bitwise_having()
+    {
+        $builder = $this->getBuilder();
+        $builder->select('*')->from('users')->groupBy('flags')->having('flags', '&', 4);
+
+        $this->assertEquals('select * from "USERS" group by "FLAGS" having BITAND("FLAGS", ?) != 0', $builder->toSql());
+    }
+
     public function test_having_followed_by_select_get()
     {
         $builder = $this->getBuilder();
