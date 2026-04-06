@@ -1214,7 +1214,26 @@ class Oci8QueryBuilderTest extends TestCase
         $builder = $this->getBuilder();
         $builder->select('*')->from('users')->where('flags', '&', 4);
 
-        $this->assertEquals('select * from "USERS" where BITAND("FLAGS", ?) != 0', $builder->toSql());
+        $this->assertEquals('select * from "USERS" where (BITAND("FLAGS", ?)) != 0', $builder->toSql());
+    }
+
+    public function test_bitwise_where_supports_missing_oracle_operators()
+    {
+        $tests = [
+            ['|', 'select * from "USERS" where (("FLAGS" + 4 - BITAND("FLAGS", 4))) != 0'],
+            ['^', 'select * from "USERS" where (("FLAGS" + 4 - (BITAND("FLAGS", 4) * 2))) != 0'],
+            ['#', 'select * from "USERS" where (("FLAGS" + 4 - (BITAND("FLAGS", 4) * 2))) != 0'],
+            ['<<', 'select * from "USERS" where (("FLAGS" * POWER(2, ?))) != 0'],
+            ['>>', 'select * from "USERS" where (FLOOR("FLAGS" / POWER(2, ?))) != 0'],
+            ['&~', 'select * from "USERS" where (("FLAGS" - BITAND("FLAGS", ?))) != 0'],
+        ];
+
+        foreach ($tests as [$operator, $sql]) {
+            $builder = $this->getBuilder();
+            $builder->select('*')->from('users')->where('flags', $operator, 4);
+
+            $this->assertSame($sql, $builder->toSql());
+        }
     }
 
     public function test_bitwise_having()
@@ -1222,7 +1241,26 @@ class Oci8QueryBuilderTest extends TestCase
         $builder = $this->getBuilder();
         $builder->select('*')->from('users')->groupBy('flags')->having('flags', '&', 4);
 
-        $this->assertEquals('select * from "USERS" group by "FLAGS" having BITAND("FLAGS", ?) != 0', $builder->toSql());
+        $this->assertEquals('select * from "USERS" group by "FLAGS" having (BITAND("FLAGS", ?)) != 0', $builder->toSql());
+    }
+
+    public function test_bitwise_having_supports_missing_oracle_operators()
+    {
+        $tests = [
+            ['|', 'select * from "USERS" group by "FLAGS" having (("FLAGS" + 4 - BITAND("FLAGS", 4))) != 0'],
+            ['^', 'select * from "USERS" group by "FLAGS" having (("FLAGS" + 4 - (BITAND("FLAGS", 4) * 2))) != 0'],
+            ['#', 'select * from "USERS" group by "FLAGS" having (("FLAGS" + 4 - (BITAND("FLAGS", 4) * 2))) != 0'],
+            ['<<', 'select * from "USERS" group by "FLAGS" having (("FLAGS" * POWER(2, ?))) != 0'],
+            ['>>', 'select * from "USERS" group by "FLAGS" having (FLOOR("FLAGS" / POWER(2, ?))) != 0'],
+            ['&~', 'select * from "USERS" group by "FLAGS" having (("FLAGS" - BITAND("FLAGS", ?))) != 0'],
+        ];
+
+        foreach ($tests as [$operator, $sql]) {
+            $builder = $this->getBuilder();
+            $builder->select('*')->from('users')->groupBy('flags')->having('flags', $operator, 4);
+
+            $this->assertSame($sql, $builder->toSql());
+        }
     }
 
     public function test_having_followed_by_select_get()
