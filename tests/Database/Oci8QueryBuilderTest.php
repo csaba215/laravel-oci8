@@ -1947,8 +1947,11 @@ class Oci8QueryBuilderTest extends TestCase
 
     public function test_join_lateral_throws_for_pre_12c()
     {
-        $builder = $this->getBuilder();
-        $sub = $this->getBuilder()->from('contacts')->whereColumn('contacts.user_id', 'users.id');
+        $connection = $this->getConnection(serverVersion: '11g');
+        $builder = new Builder($connection, new OracleGrammar($connection), m::mock(OracleProcessor::class));
+
+        $sub = new Builder($connection, new OracleGrammar($connection), m::mock(OracleProcessor::class));
+        $sub->from('contacts')->whereColumn('contacts.user_id', 'users.id');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Lateral joins are only supported by Oracle 12c and newer.');
