@@ -241,10 +241,15 @@ class OracleProcessor extends Processor
                 'name' => strtolower((string) $result->name),
                 'type_name' => strtolower((string) $result->type_name),
                 'type' => $type,
+                'collation' => $result->collation ? strtolower((string) $result->collation) : null,
                 'nullable' => (bool) $result->nullable,
-                'default' => $result->default,
+                'default' => $result->generated ? null : $result->default,
                 'auto_increment' => (bool) $result->auto_increment,
                 'comment' => $result->comment != '' ? $result->comment : null,
+                'generation' => $result->generated ? [
+                    'type' => strtolower((string) $result->generated),
+                    'expression' => $result->default,
+                ] : null,
                 'length' => $length,
                 'precision' => $precision,
             ];

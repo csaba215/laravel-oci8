@@ -582,16 +582,19 @@ class Oci8SchemaGrammarTest extends TestCase
     public function test_compile_columns_method()
     {
         $grammar = $this->getGrammar();
+        $conn = $this->getConnection();
         $expected = '
             select
                 t.column_name as name,
                 nvl(t.data_type_mod, data_type) as type_name,
-                null as auto_increment,
+                '.($conn->isVersionAboveOrEqual('12c') ? "decode(t.identity_column, 'YES', 1, 0) as auto_increment," : 'null as auto_increment,').'
                 t.data_type as type,
                 t.data_length,
                 t.char_length,
                 t.data_precision as precision,
                 t.data_scale as places,
+                '.($conn->isVersionAboveOrEqual('12cR2') ? 'lower(t.collation) as collation,' : 'null as collation,').'
+                decode(t.virtual_column, \'YES\', \'virtual\', null) as generated,
                 decode(t.nullable, \'Y\', 1, 0) as nullable,
                 t.data_default as "default",
                 c.comments as "comment"
