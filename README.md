@@ -179,6 +179,33 @@ class Config {
 
 Then run your laravel installation...
 
+## Oracle BLOB Storage Driver
+
+The package registers an `oracle-blob` filesystem driver for storing Laravel storage files in a table BLOB column.
+
+```php
+'oracle_files' => [
+    'driver' => 'oracle-blob',
+    'connection' => 'oracle',
+    'table' => 'filesystem_blobs',
+    'path_column' => 'path',
+    'blob_column' => 'contents',
+    'sequence' => 'id',
+],
+```
+
+You can customize how the driver resolves the table, path value, path column, and BLOB column by setting a resolver class:
+
+```php
+'oracle_files' => [
+    'driver' => 'oracle-blob',
+    'connection' => 'oracle',
+    'resolver' => App\Storage\OracleBlobResolver::class,
+],
+```
+
+The resolver must implement `Yajra\Oci8\Storage\BlobStorageResolver`.
+
 ## Oracle versions
 
 To set this version use `DB_SERVER_VERSION` env variable or change `server_version` variable in the oracle.php config.
