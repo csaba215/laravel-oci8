@@ -60,6 +60,49 @@ jobs:
           tools: composer:v2
           coverage: xdebug
 
+      - name: Install PDO OCI extension
+        if: matrix.oracle != '11g'
+        run: |
+          curl -Ls https://download.oracle.com/otn_software/linux/instantclient/instantclient-basiclite-linuxx64.zip -o /tmp/instantclient-basiclite.zip
+          curl -Ls https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip -o /tmp/instantclient-sdk.zip
+          sudo unzip -oq /tmp/instantclient-basiclite.zip -d /opt/oracle
+          sudo unzip -oq /tmp/instantclient-sdk.zip -d /opt/oracle
+
+          git clone --depth=1 https://github.com/php/pecl-database-pdo_oci.git /tmp/pdo_oci
+          cd /tmp/pdo_oci
+
+          phpize
+
+          ORACLE_CLIENT_DIR="$(find /opt/oracle /usr/lib/oracle -name 'libclntsh.so*' -printf '%h\n' 2>/dev/null | sort -V | tail -n 1)"
+
+          if [ -z "$ORACLE_CLIENT_DIR" ]; then
+            echo "Unable to locate Oracle Instant Client"
+            find /opt/oracle -maxdepth 2 -type f -o -type d
+            exit 1
+          fi
+
+          if [ ! -e "$ORACLE_CLIENT_DIR/libclntsh.so" ]; then
+            LIBCLNTSH="$(find "$ORACLE_CLIENT_DIR" -maxdepth 1 -name 'libclntsh.so.*' | sort -V | tail -n 1)"
+
+            if [ -z "$LIBCLNTSH" ]; then
+              echo "Unable to locate libclntsh.so in $ORACLE_CLIENT_DIR"
+              ls -la "$ORACLE_CLIENT_DIR"
+              exit 1
+            fi
+
+            sudo ln -s "$(basename "$LIBCLNTSH")" "$ORACLE_CLIENT_DIR/libclntsh.so"
+          fi
+
+          echo "LD_LIBRARY_PATH=$ORACLE_CLIENT_DIR:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+          export LD_LIBRARY_PATH="$ORACLE_CLIENT_DIR:${LD_LIBRARY_PATH:-}"
+
+          ./configure --with-pdo-oci=instantclient,"$ORACLE_CLIENT_DIR"
+          make -j"$(nproc)"
+          sudo make install
+
+          echo "extension=pdo_oci.so" | sudo tee "$(php-config --ini-dir)/pdo_oci.ini"
+          php -m | grep -i '^pdo_oci$'
+
       - name: Install dependencies
         uses: nick-invision/retry@v4
         with:
@@ -223,6 +266,7 @@ jobs:
           ORACLE_PASSWORD: LaravelOci8_123!
           ORACLE_SECOND_USER: second_connection
           ORACLE_SECOND_PASSWORD: ${{ (matrix.oracle == '19c' || matrix.oracle == '23ai') && 'SecondConnection1!' || 'second_connection' }}
+          ORACLE_PDO: ${{ matrix.oracle == '11g' && 'pdo-via-oci8' || 'pdo_oci' }}
         run: |
           mkdir -p build/coverage
           COVERAGE_FILE="build/coverage/oracle-php-${{ matrix.php }}-${{ matrix.oracle }}.cov"

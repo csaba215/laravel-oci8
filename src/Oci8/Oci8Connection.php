@@ -34,6 +34,8 @@ class Oci8Connection extends Connection
 
     protected string $schemaPrefix = '';
 
+    protected array $nativePdoOciLobResources = [];
+
     /**
      * @param  PDO|\Closure  $pdo
      * @param  string  $database
@@ -191,6 +193,20 @@ class Oci8Connection extends Connection
     }
 
     /**
+     * Run a select statement against the database.
+     *
+     * @param  string  $query
+     * @param  array  $bindings
+     * @param  bool  $useReadPdo
+     * @param  array  $fetchUsing
+     * @return array
+     */
+    public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = [])
+    {
+        return $this->normalizeNativePdoOciResources(parent::select($query, $bindings, $useReadPdo, $fetchUsing));
+    }
+
+    /**
      * Set oracle session date format.
      */
     public function setDateFormat(string $format = 'YYYY-MM-DD HH24:MI:SS'): static
@@ -228,7 +244,12 @@ class Oci8Connection extends Connection
 
         $stmt = $this->addBindingsToStatement($stmt, $bindings);
 
-        $stmt->bindParam(':result', $result, $returnType, $length);
+        if ($this->isNativePdoOci()) {
+            $stmt->bindParam(':result', $result, $returnType, $length ?? ($returnType === PDO::PARAM_INT ? 32 : 4000));
+        } else {
+            $stmt->bindParam(':result', $result, $returnType, $length);
+        }
+
         $stmt->execute();
 
         return $result;
@@ -270,6 +291,16 @@ class Oci8Connection extends Connection
         $cursor = null;
         $stmt->bindParam($cursorName, $cursor, PDO::PARAM_STMT);
         $stmt->execute();
+
+        if ($this->isNativePdoOci()) {
+            if ($cursor instanceof PDOStatement) {
+                $cursor->execute();
+
+                return $this->normalizeNativePdoOciResources($cursor->fetchAll(PDO::FETCH_OBJ));
+            }
+
+            return [];
+        }
 
         $statement = new Statement($cursor, $this->getPdo(), $this->getPdo()->getOptions());
         $statement->execute();
@@ -413,7 +444,19 @@ class Oci8Connection extends Connection
                 $options = array_key_exists('options', $binding) ? $binding['options'] : $options;
             }
 
-            $stmt->bindParam(':'.$key, $value, $type, $length, $options);
+            if ($this->isNativePdoOci()) {
+                if (($type & PDO::PARAM_INPUT_OUTPUT) === PDO::PARAM_INPUT_OUTPUT && $length < 1) {
+                    $length = ($type & ~PDO::PARAM_INPUT_OUTPUT) === PDO::PARAM_INT ? 32 : 4000;
+                }
+
+                if ($length > 0) {
+                    $stmt->bindParam(':'.$key, $value, $type, $length);
+                } else {
+                    $stmt->bindParam(':'.$key, $value, $type);
+                }
+            } else {
+                $stmt->bindParam(':'.$key, $value, $type, $length, $options);
+            }
         }
 
         return $stmt;
@@ -480,8 +523,72 @@ class Oci8Connection extends Connection
      */
     public function bindValues($statement, $bindings): void
     {
+        $this->nativePdoOciLobResources = [];
+
         foreach ($bindings as $key => $value) {
-            $statement->bindValue(is_string($key) ? $key : $key + 1, $value, is_string($value) && strlen($value) > 3999 ? SQLT_CLOB : PDO::PARAM_STR);
+            $type = PDO::PARAM_STR;
+
+            if (is_string($value) && strlen($value) > 3999) {
+                if ($this->isNativePdoOci()) {
+                    $stream = fopen('php://temp', 'r+');
+                    fwrite($stream, $value);
+                    rewind($stream);
+
+                    $parameter = is_string($key) ? $key : $key + 1;
+                    $this->nativePdoOciLobResources[$parameter] = $stream;
+                    $statement->bindParam($parameter, $this->nativePdoOciLobResources[$parameter], PDO::PARAM_LOB);
+
+                    continue;
+                } else {
+                    $type = SQLT_CLOB;
+                }
+            }
+
+            $statement->bindValue(is_string($key) ? $key : $key + 1, $value, $type);
         }
+    }
+
+    private function isNativePdoOci(): bool
+    {
+        return $this->getPdo()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'oci';
+    }
+
+    private function normalizeNativePdoOciResources(mixed $value): mixed
+    {
+        if (! $this->isNativePdoOci()) {
+            return $value;
+        }
+
+        if (is_resource($value)) {
+            $contents = stream_get_contents($value);
+
+            if ($contents !== false && $contents !== '') {
+                return $contents;
+            }
+
+            if (stream_get_meta_data($value)['seekable'] ?? false) {
+                rewind($value);
+
+                return stream_get_contents($value) ?: '';
+            }
+
+            return '';
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->normalizeNativePdoOciResources($item);
+            }
+
+            return $value;
+        }
+
+        if (is_object($value)) {
+            foreach (get_object_vars($value) as $key => $item) {
+                $value->{$key} = $this->normalizeNativePdoOciResources($item);
+            }
+        }
+
+        return $value;
     }
 }
