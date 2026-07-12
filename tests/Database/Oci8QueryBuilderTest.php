@@ -3909,6 +3909,32 @@ class Oci8QueryBuilderTest extends TestCase
         return new Builder(m::mock(ConnectionInterface::class), $grammar, $processor);
     }
 
+    public function test_process_select_converts_lob_streams_to_strings()
+    {
+        $builder = $this->getBuilderWithProcessor();
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, 'large clob value');
+
+        $results = $builder->getProcessor()->processSelect($builder, [
+            (object) ['value' => $stream],
+        ]);
+
+        $this->assertSame('large clob value', $results[0]->value);
+    }
+
+    public function test_process_select_converts_nested_lob_streams_to_strings()
+    {
+        $builder = $this->getBuilderWithProcessor();
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, 'nested clob value');
+
+        $results = $builder->getProcessor()->processSelect($builder, [
+            (object) ['nested' => ['value' => $stream]],
+        ]);
+
+        $this->assertSame('nested clob value', $results[0]->nested['value']);
+    }
+
     public function test_order_by_not_duplicated_with_lock()
     {
         $builder = $this->getBuilder();

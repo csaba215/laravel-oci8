@@ -367,6 +367,8 @@ class OracleProcessor extends Processor
      */
     public function processSelect(Builder $query, $results)
     {
+        $results = $this->normalizeLobValues($results);
+
         /** @var Oci8Connection $connection */
         $connection = $query->getConnection();
 
@@ -381,6 +383,50 @@ class OracleProcessor extends Processor
         }
 
         return $results;
+    }
+
+    private function normalizeLobValues(mixed $value): mixed
+    {
+        if (is_resource($value)) {
+            $contents = stream_get_contents($value);
+
+            if ($contents !== false && $contents !== '') {
+                return $contents;
+            }
+
+            if (stream_get_meta_data($value)['seekable'] ?? false) {
+                rewind($value);
+
+                return stream_get_contents($value) ?: '';
+            }
+
+            return '';
+        }
+
+        if ($this->isOciLob($value)) {
+            return $value->load() ?: '';
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->normalizeLobValues($item);
+            }
+
+            return $value;
+        }
+
+        if (is_object($value)) {
+            foreach (get_object_vars($value) as $key => $item) {
+                $value->{$key} = $this->normalizeLobValues($item);
+            }
+        }
+
+        return $value;
+    }
+
+    private function isOciLob(mixed $value): bool
+    {
+        return is_object($value) && in_array(get_class($value), ['OCILob', 'OCI-Lob'], true);
     }
 
     /**
