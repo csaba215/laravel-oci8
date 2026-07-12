@@ -211,6 +211,14 @@ class OracleConnector extends Connector implements ConnectorInterface
         $config = $this->setCharset($config);
         $options['charset'] = $config['charset'];
 
+        if (($config['pdo'] ?? null) === 'pdo_oci') {
+            return parent::createConnection(
+                "oci:dbname={$dsn};charset={$config['charset']}",
+                $config,
+                array_filter($options, 'is_int', ARRAY_FILTER_USE_KEY)
+            );
+        }
+
         return parent::createConnection($dsn, $config, $options);
     }
 
@@ -222,8 +230,12 @@ class OracleConnector extends Connector implements ConnectorInterface
      * @param  string  $password
      * @param  array  $options
      */
-    protected function createPdoConnection($dsn, $username, #[\SensitiveParameter] $password, $options): Oci8
+    protected function createPdoConnection($dsn, $username, #[\SensitiveParameter] $password, $options): PDO|Oci8
     {
+        if (str_starts_with($dsn, 'oci:')) {
+            return new PDO($dsn, $username, $password, $options);
+        }
+
         return new Oci8($dsn, $username, $password, $options);
     }
 }

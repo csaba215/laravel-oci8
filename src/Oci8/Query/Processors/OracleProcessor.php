@@ -36,7 +36,7 @@ class OracleProcessor extends Processor
         $statement = $this->prepareStatement($query, $sql);
         $values = $this->incrementBySequence($values, $sequence);
         $parameter = $this->bindValues($query, $values, $statement, $parameter);
-        $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
+        $this->bindParam($query, $statement, $parameter, $id, PDO::PARAM_INT);
 
         try {
             $statement->execute();
@@ -156,6 +156,7 @@ class OracleProcessor extends Processor
 
         $connection->recordsHaveBeenModified();
         $start = microtime(true);
+        $lobResources = [];
 
         $id = 0;
         $parameter = 1;
@@ -165,12 +166,26 @@ class OracleProcessor extends Processor
 
         $countBinary = count($binaries);
         for ($i = 0; $i < $countBinary; $i++) {
-            $statement->bindParam($parameter, $binaries[$i], PDO::PARAM_LOB, -1);
+            if ($this->isNativePdoOci($query)) {
+                if (is_resource($binaries[$i])) {
+                    $stream = $binaries[$i];
+                    rewind($stream);
+                } else {
+                    $stream = fopen('php://temp', 'r+');
+                    fwrite($stream, is_string($binaries[$i]) ? $binaries[$i] : serialize($binaries[$i]));
+                    rewind($stream);
+                }
+
+                $lobResources[] = $stream;
+                $binaries[$i] = $stream;
+            }
+
+            $this->bindParam($query, $statement, $parameter, $binaries[$i], PDO::PARAM_LOB);
             $parameter++;
         }
 
         // bind output param for the returning clause.
-        $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
+        $this->bindParam($query, $statement, $parameter, $id, PDO::PARAM_INT);
 
         if (! $statement->execute()) {
             return 0;
@@ -179,6 +194,28 @@ class OracleProcessor extends Processor
         $connection->logQuery($sql, $values, $this->getElapsedTime($start));
 
         return $id;
+    }
+
+    private function bindParam(Builder $query, PDOStatement $statement, int|string $parameter, mixed &$value, int $type): void
+    {
+        if ($this->isNativePdoOci($query)) {
+            if ($type === PDO::PARAM_INT) {
+                $statement->bindParam($parameter, $value, $type, 32);
+
+                return;
+            }
+
+            $statement->bindParam($parameter, $value, $type);
+
+            return;
+        }
+
+        $statement->bindParam($parameter, $value, $type, -1);
+    }
+
+    private function isNativePdoOci(Builder $query): bool
+    {
+        return $query->getConnection()->getPdo()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'oci';
     }
 
     /**
