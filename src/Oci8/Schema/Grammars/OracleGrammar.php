@@ -888,6 +888,10 @@ class OracleGrammar extends Grammar
      */
     protected function typeDate(Fluent $column): string
     {
+        if ($column->useCurrent) {
+            $column->default(new Expression('CURRENT_DATE'));
+        }
+
         return 'date';
     }
 
@@ -896,6 +900,10 @@ class OracleGrammar extends Grammar
      */
     protected function typeDateTime(Fluent $column): string
     {
+        if ($column->useCurrent) {
+            $column->default(new Expression('CURRENT_TIMESTAMP'));
+        }
+
         return 'date';
     }
 
@@ -904,6 +912,10 @@ class OracleGrammar extends Grammar
      */
     protected function typeDateTimeTz(Fluent $column): string
     {
+        if ($column->useCurrent) {
+            $column->default(new Expression('CURRENT_TIMESTAMP'));
+        }
+
         return 'timestamp with time zone';
     }
 
@@ -920,6 +932,10 @@ class OracleGrammar extends Grammar
      */
     protected function typeTimestamp(Fluent $column): string
     {
+        if ($column->useCurrent) {
+            $column->default(new Expression('CURRENT_TIMESTAMP'));
+        }
+
         return 'timestamp';
     }
 
@@ -928,6 +944,10 @@ class OracleGrammar extends Grammar
      */
     protected function typeTimestampTz(Fluent $column): string
     {
+        if ($column->useCurrent) {
+            $column->default(new Expression('CURRENT_TIMESTAMP'));
+        }
+
         return 'timestamp with time zone';
     }
 
