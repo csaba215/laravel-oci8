@@ -1588,6 +1588,16 @@ class Oci8SchemaGrammarTest extends TestCase
             $statements[0]);
     }
 
+    public function test_adding_enum_escapes_allowed_values()
+    {
+        $blueprint = new Blueprint($this->getConnection(), 'users');
+        $blueprint->enum('role', ["manager's", "'quoted'"]);
+
+        $this->assertSame([
+            'alter table "USERS" add ( "ROLE" varchar2(255) not null check ("ROLE" in (\'manager\'\'s\', \'\'\'quoted\'\'\')) )',
+        ], $blueprint->toSql());
+    }
+
     public function test_adding_year()
     {
         $conn = $this->getConnection();
