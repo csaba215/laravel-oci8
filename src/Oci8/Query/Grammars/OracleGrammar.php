@@ -891,6 +891,76 @@ class OracleGrammar extends Grammar
     }
 
     /**
+     * Compile a where row values condition.
+     */
+    protected function whereRowValues(Builder $query, $where): string
+    {
+        return match ($where['operator']) {
+            '=' => $this->compileRowValueEquality($where['columns'], $where['values']),
+            '!=', '<>' => 'not '.$this->compileRowValueEquality($where['columns'], $where['values']),
+            '<', '<=', '>', '>=' => $this->compileOrderedRowValueComparison(
+                $where['columns'],
+                $where['values'],
+                $where['operator']
+            ),
+            default => parent::whereRowValues($query, $where),
+        };
+    }
+
+    /**
+     * Compile an equality comparison between row values.
+     */
+    protected function compileRowValueEquality(array $columns, array $values): string
+    {
+        $conditions = [];
+
+        foreach ($columns as $index => $column) {
+            $conditions[] = $this->wrap($column).' = '.$this->parameter($values[$index]);
+        }
+
+        return '('.implode(' and ', $conditions).')';
+    }
+
+    /**
+     * Compile a lexicographical comparison between row values.
+     */
+    protected function compileOrderedRowValueComparison(array $columns, array $values, string $operator): string
+    {
+        $valueColumns = [];
+        $valueReferences = [];
+        $valueTable = 'laravel_row_values';
+
+        foreach ($values as $index => $value) {
+            $valueColumn = 'laravel_row_value_'.$index;
+            $valueColumns[] = $this->parameter($value).' as '.$this->wrap($valueColumn);
+            $valueReferences[] = $this->wrap($valueTable.'.'.$valueColumn);
+        }
+
+        $strictOperator = str_starts_with($operator, '<') ? '<' : '>';
+        $comparisons = [];
+        $equalities = [];
+        $lastIndex = count($columns) - 1;
+
+        foreach ($columns as $index => $column) {
+            $column = $this->wrap($column);
+            $comparisonOperator = $index === $lastIndex ? $operator : $strictOperator;
+            $conditions = [...$equalities, $column.' '.$comparisonOperator.' '.$valueReferences[$index]];
+
+            $comparisons[] = count($conditions) === 1
+                ? $conditions[0]
+                : '('.implode(' and ', $conditions).')';
+
+            $equalities[] = $column.' = '.$valueReferences[$index];
+        }
+
+        $valuesSql = implode(', ', $valueColumns);
+        $comparisonSql = implode(' or ', $comparisons);
+
+        return 'exists (select 1 from (select '.$valuesSql.' from dual) '
+            .$this->wrap($valueTable).' where ('.$comparisonSql.'))';
+    }
+
+    /**
      * Compile a "where date" clause.
      *
      * @param  array  $where
