@@ -1055,6 +1055,10 @@ class OracleGrammar extends Grammar
 
         $null .= $enum;
 
+        if ($column->change && array_key_exists('default', $column->getAttributes()) && is_null($column->default)) {
+            return ' default null'.$null;
+        }
+
         if (! is_null($column->default)) {
             return ' default '.$this->getDefaultValue($column->default).$null;
         }
