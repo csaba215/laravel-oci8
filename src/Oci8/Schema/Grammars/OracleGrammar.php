@@ -168,7 +168,9 @@ class OracleGrammar extends Grammar
 
             $onColumns = $this->columnize((array) $foreign->references);
 
-            $sql .= ", constraint {$foreign->index} foreign key ( {$columns} ) references {$on} ( {$onColumns} )";
+            $index = $this->wrap($foreign->index);
+
+            $sql .= ", constraint {$index} foreign key ( {$columns} ) references {$on} ( {$onColumns} )";
 
             // Once we have the basic foreign key creation statement constructed we can
             // build out the syntax for what should happen on an update or delete of
@@ -194,7 +196,7 @@ class OracleGrammar extends Grammar
         if (! is_null($primary)) {
             $columns = $this->columnize($primary->columns);
 
-            return ", constraint {$primary->index} primary key ( {$columns} )";
+            return ', constraint '.$this->wrap($primary->index)." primary key ( {$columns} )";
         }
 
         return null;
@@ -377,7 +379,7 @@ class OracleGrammar extends Grammar
 
             $table = $this->wrapTable($blueprint);
 
-            return "alter table {$table} add constraint {$command->index} primary key ({$columns})";
+            return 'alter table '.$table.' add constraint '.$this->wrap($command->index)." primary key ({$columns})";
         }
 
         return null;
@@ -402,7 +404,7 @@ class OracleGrammar extends Grammar
 
             $onColumns = $this->columnize((array) $command->references);
 
-            $sql = "alter table {$table} add constraint {$command->index} ";
+            $sql = 'alter table '.$table.' add constraint '.$this->wrap($command->index).' ';
 
             $sql .= "foreign key ( {$columns} ) references {$on} ( {$onColumns} )";
 
@@ -426,7 +428,7 @@ class OracleGrammar extends Grammar
      */
     public function compileUnique(Blueprint $blueprint, Fluent $command): string
     {
-        $sql = 'alter table '.$this->wrapTable($blueprint)." add constraint {$command->index} unique ( ".$this->columnize($command->columns).' )';
+        $sql = 'alter table '.$this->wrapTable($blueprint).' add constraint '.$this->wrap($command->index).' unique ( '.$this->columnize($command->columns).' )';
 
         return $this->appendDeferrableClause($command, $sql);
     }
@@ -458,7 +460,7 @@ class OracleGrammar extends Grammar
      */
     public function compileIndex(Blueprint $blueprint, Fluent $command): string
     {
-        $sql = "create index {$command->index} on ".$this->wrapTable($blueprint).' ( '.$this->columnize($command->columns).' )';
+        $sql = 'create index '.$this->wrap($command->index).' on '.$this->wrapTable($blueprint).' ( '.$this->columnize($command->columns).' )';
 
         if ($command->online) {
             $sql .= ' online';
@@ -489,6 +491,8 @@ class OracleGrammar extends Grammar
             }
 
             $parametersIndex .= 'sync(on commit)';
+
+            $indexName = $this->wrap($indexName);
 
             $sql = "execute immediate 'create index {$indexName} on $tableName ($column) indextype is ctxsys.context parameters (''$parametersIndex'')';";
 
@@ -586,7 +590,7 @@ class OracleGrammar extends Grammar
     {
         $table = $this->wrapTable($blueprint);
 
-        $index = mb_substr($command->index, 0, $this->getMaxLength());
+        $index = $this->wrap(mb_substr($command->index, 0, $this->getMaxLength()));
 
         if ($type === 'index') {
             return "drop index {$index}";
