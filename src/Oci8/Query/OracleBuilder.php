@@ -11,6 +11,42 @@ use Yajra\Oci8\Query\Processors\OracleProcessor;
 class OracleBuilder extends Builder
 {
     /**
+     * Insert new records into the database.
+     */
+    public function insert(array $values): bool
+    {
+        return parent::insert($this->prepareBlobBindings($values));
+    }
+
+    /**
+     * Mark values targeting BLOB columns so the connection can bind them correctly.
+     */
+    private function prepareBlobBindings(array $values): array
+    {
+        if (! is_string($this->from) || ! collect($values)->flatten()->contains(
+            static fn (mixed $value): bool => is_string($value) && strlen($value) > 3999
+        )) {
+            return $values;
+        }
+
+        $blobColumns = collect($this->connection->getSchemaBuilder()->getColumns($this->from))
+            ->filter(static fn (array $column): bool => strtolower($column['type_name']) === 'blob')
+            ->mapWithKeys(static fn (array $column): array => [strtolower($column['name']) => true]);
+
+        $prepareRow = static function (array $row) use ($blobColumns): array {
+            foreach ($row as $column => $value) {
+                if (is_string($value) && $blobColumns->has(strtolower($column))) {
+                    $row[$column] = new BlobValue($value);
+                }
+            }
+
+            return $row;
+        };
+
+        return is_array(reset($values)) ? array_map($prepareRow, $values) : $prepareRow($values);
+    }
+
+    /**
      * Insert a new record and get the value of the primary key.
      */
     public function insertLob(array $values, array $binaries, string $sequence = 'id'): int

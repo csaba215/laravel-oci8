@@ -16,9 +16,11 @@ use Mockery\MockInterface;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Yajra\Oci8\Oci8Connection as Connection;
+use Yajra\Oci8\Query\BlobValue;
 use Yajra\Oci8\Query\Grammars\OracleGrammar;
 use Yajra\Oci8\Query\OracleBuilder as Builder;
 use Yajra\Oci8\Query\Processors\OracleProcessor;
+use Yajra\Oci8\Schema\OracleBuilder as SchemaBuilder;
 
 class Oci8QueryBuilderTest extends TestCase
 {
@@ -2721,6 +2723,54 @@ class Oci8QueryBuilderTest extends TestCase
             ->with('insert into "USERS" ("EMAIL") values (CURRENT TIMESTAMP)', [])
             ->andReturn(true);
         $result = $builder->from('users')->insert(['email' => new Raw('CURRENT TIMESTAMP')]);
+        $this->assertTrue($result);
+    }
+
+    public function test_insert_method_detects_blob_columns_for_long_strings()
+    {
+        $contents = str_repeat('binary contents', 400);
+        $builder = $this->getBuilder();
+        $schema = m::mock(SchemaBuilder::class);
+        $schema->shouldReceive('getColumns')->once()->with('users')->andReturn([
+            ['name' => 'email', 'type_name' => 'varchar2'],
+            ['name' => 'myblob', 'type_name' => 'blob'],
+        ]);
+        $builder->getConnection()->shouldReceive('getSchemaBuilder')->once()->andReturn($schema);
+        $builder->getConnection()->shouldReceive('insert')->once()->withArgs(
+            function (string $sql, array $bindings) use ($contents): bool {
+                $this->assertSame('insert into "USERS" ("EMAIL", "MYBLOB") values (?, ?)', $sql);
+                $this->assertSame('foo', $bindings[0]);
+                $this->assertInstanceOf(BlobValue::class, $bindings[1]);
+                $this->assertSame($contents, $bindings[1]->value);
+
+                return true;
+            }
+        )->andReturnTrue();
+
+        $result = $builder->from('users')->insert([
+            'email' => 'foo',
+            'myblob' => $contents,
+        ]);
+
+        $this->assertTrue($result);
+    }
+
+    public function test_insert_method_keeps_long_clob_values_as_strings()
+    {
+        $contents = str_repeat('clob contents', 400);
+        $builder = $this->getBuilder();
+        $schema = m::mock(SchemaBuilder::class);
+        $schema->shouldReceive('getColumns')->once()->with('users')->andReturn([
+            ['name' => 'contents', 'type_name' => 'clob'],
+        ]);
+        $builder->getConnection()->shouldReceive('getSchemaBuilder')->once()->andReturn($schema);
+        $builder->getConnection()->shouldReceive('insert')
+            ->once()
+            ->with('insert into "USERS" ("CONTENTS") values (?)', [$contents])
+            ->andReturnTrue();
+
+        $result = $builder->from('users')->insert(['contents' => $contents]);
+
         $this->assertTrue($result);
     }
 

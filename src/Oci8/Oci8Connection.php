@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use PDO;
 use PDOStatement;
 use Throwable;
+use Yajra\Oci8\Query\BlobValue;
 use Yajra\Oci8\Query\Grammars\OracleGrammar as QueryGrammar;
 use Yajra\Oci8\Query\OracleBuilder as QueryBuilder;
 use Yajra\Oci8\Query\Processors\OracleProcessor as Processor;
@@ -481,6 +482,12 @@ class Oci8Connection extends Connection
     public function bindValues($statement, $bindings): void
     {
         foreach ($bindings as $key => $value) {
+            if ($value instanceof BlobValue) {
+                $statement->bindValue(is_string($key) ? $key : $key + 1, $value->value, PDO::PARAM_LOB);
+
+                continue;
+            }
+
             $statement->bindValue(is_string($key) ? $key : $key + 1, $value, is_string($value) && strlen($value) > 3999 ? SQLT_CLOB : PDO::PARAM_STR);
         }
     }

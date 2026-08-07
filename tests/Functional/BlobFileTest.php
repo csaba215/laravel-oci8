@@ -4,6 +4,7 @@ namespace Yajra\Oci8\Tests\Functional;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use Yajra\Oci8\Eloquent\OracleEloquent;
@@ -51,15 +52,16 @@ class BlobFileTest extends TestCase
         $contents = str_repeat("\x00\xFFLaravel OCI8 BLOB\x10", 40000);
         $file = UploadedFile::fake()->createWithContent('inserted-payload.bin', $contents);
 
-        $inserted = BlobFile::query()->insert([
+        $inserted = DB::table('blob_files')->insert([
             'filename' => $file->getClientOriginalName(),
             'contents' => $file->getContent(),
         ]);
-        $storedBlobFile = BlobFile::query()
+        $storedBlobFile = DB::table('blob_files')
             ->where('filename', 'inserted-payload.bin')
-            ->firstOrFail();
+            ->first();
 
         $this->assertTrue($inserted);
+        $this->assertNotNull($storedBlobFile);
         $this->assertSame('inserted-payload.bin', $storedBlobFile->filename);
         $this->assertSame($contents, $storedBlobFile->contents);
     }

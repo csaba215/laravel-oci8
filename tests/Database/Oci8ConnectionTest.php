@@ -10,6 +10,7 @@ use PDOException;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
 use Yajra\Oci8\Oci8Connection;
+use Yajra\Oci8\Query\BlobValue;
 use Yajra\Oci8\Schema\Sequence;
 use Yajra\Oci8\Schema\Trigger;
 
@@ -135,6 +136,18 @@ class Oci8ConnectionTest extends TestCase
         $connection = new Oci8Connection(new Oci8ConnectionTestMockPDO);
 
         $this->assertSame('YYYY-MM-DD HH24:MI:SS', $connection->getDateFormat());
+    }
+
+    public function test_blob_values_are_bound_as_blobs()
+    {
+        $connection = new Oci8Connection(new Oci8ConnectionTestMockPDO);
+        $statement = m::mock();
+        $statement->shouldReceive('bindValue')
+            ->once()
+            ->with(1, 'binary contents', PDO::PARAM_LOB)
+            ->andReturnTrue();
+
+        $connection->bindValues($statement, [new BlobValue('binary contents')]);
     }
 
     public function test_thread_count_returns_null_when_oracle_session_view_is_not_accessible()
