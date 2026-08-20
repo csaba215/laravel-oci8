@@ -84,6 +84,7 @@ This will copy the configuration file to `config/oracle.php`.
     'service_name'   => env('DB_SERVICE_NAME', ''),
     'username'       => env('DB_USERNAME', ''),
     'password'       => env('DB_PASSWORD', ''),
+    'pdo'            => env('ORACLE_PDO', 'pdo-via-oci8'),
     'charset'        => env('DB_CHARSET', 'AL32UTF8'),
     'prefix'         => env('DB_PREFIX', ''),
     'prefix_schema'  => env('DB_SCHEMA_PREFIX', ''),
@@ -110,12 +111,21 @@ DB_SERVICE_NAME=orcl
 DB_DATABASE=xe
 DB_USERNAME=hr
 DB_PASSWORD=hr
+ORACLE_PDO=pdo-via-oci8
 DB_CONNECT_TIMEOUT=10
 DB_RETRY_COUNT=3
 DB_RETRY_DELAY=1
 DB_TRANSPORT_CONNECT_TIMEOUT=60
 DB_EXPIRE_TIME=0
 ```
+
+The `ORACLE_PDO` setting controls the underlying Oracle PDO implementation. It defaults to `pdo-via-oci8`, which uses the package's OCI8-backed PDO compatibility layer. Set it to `pdo_oci` to use PHP's native PDO OCI driver instead:
+
+```ini
+ORACLE_PDO=pdo_oci
+```
+
+The native option requires the `pdo_oci` PHP extension to be installed and enabled.
 
 > If you want to connect to a cluster containing multiple hosts, you can either set `tns` manually or set host as a comma-separated array and configure other fields as you wish:
 
