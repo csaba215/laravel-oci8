@@ -102,6 +102,7 @@ trait InteractsWithTestDatabases
             'service_name' => $this->serviceName(),
             'username' => $this->oracleUsername(),
             'password' => $this->oraclePassword(),
+            'pdo' => getenv('ORACLE_PDO') ?: 'pdo-via-oci8',
             'server_version' => $this->serverVersion(),
             'connect_timeout' => '120',
             'retry_count' => '3',

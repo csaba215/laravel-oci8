@@ -10,6 +10,7 @@ return [
         'service_name' => env('DB_SERVICE_NAME', ''),
         'username' => env('DB_USERNAME', ''),
         'password' => env('DB_PASSWORD', ''),
+        'pdo' => env('ORACLE_PDO', 'pdo-via-oci8'),
         'charset' => env('DB_CHARSET', 'AL32UTF8'),
         'prefix' => env('DB_PREFIX', ''),
         'prefix_schema' => env('DB_SCHEMA_PREFIX', ''),

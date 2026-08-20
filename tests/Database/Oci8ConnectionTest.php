@@ -193,6 +193,73 @@ class Oci8ConnectionTest extends TestCase
         $this->assertTrue($connection->isVersionBelowOrEqual('12cR2'));
     }
 
+    public function test_native_pdo_oci_uses_a_default_length_for_function_output()
+    {
+        $pdo = new Oci8ConnectionTestMockPDO;
+        $pdo->driverName = 'oci';
+        $connection = new Oci8Connection($pdo);
+
+        $connection->executeFunction('demo_function');
+
+        $this->assertSame(':result', $pdo->statement->boundParams[0]['parameter']);
+        $this->assertSame(PDO::PARAM_STR, $pdo->statement->boundParams[0]['type']);
+        $this->assertSame(4000, $pdo->statement->boundParams[0]['length']);
+        $this->assertSame(4, $pdo->statement->boundParams[0]['argument_count']);
+    }
+
+    public function test_native_pdo_oci_uses_a_default_length_for_input_output_bindings()
+    {
+        $pdo = new Oci8ConnectionTestMockPDO;
+        $pdo->driverName = 'oci';
+        $connection = new Oci8Connection($pdo);
+
+        $connection->addBindingsToStatement($pdo->statement, [
+            'id' => [
+                'value' => 1,
+                'type' => PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT,
+            ],
+        ]);
+
+        $this->assertSame(':id', $pdo->statement->boundParams[0]['parameter']);
+        $this->assertSame(PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT, $pdo->statement->boundParams[0]['type']);
+        $this->assertSame(32, $pdo->statement->boundParams[0]['length']);
+        $this->assertSame(4, $pdo->statement->boundParams[0]['argument_count']);
+    }
+
+    public function test_native_pdo_oci_binds_long_strings_as_lob_streams()
+    {
+        $pdo = new Oci8ConnectionTestMockPDO;
+        $pdo->driverName = 'oci';
+        $connection = new Oci8Connection($pdo);
+        $value = str_repeat('x', 4000);
+
+        $connection->bindValues($pdo->statement, [$value]);
+
+        $binding = $pdo->statement->boundParams[0];
+        $this->assertSame(1, $binding['parameter']);
+        $this->assertSame(PDO::PARAM_LOB, $binding['type']);
+        $this->assertIsResource($binding['value']);
+        $this->assertSame($value, stream_get_contents($binding['value']));
+        $this->assertSame([], $pdo->statement->boundValues);
+    }
+
+    public function test_native_pdo_oci_leaves_returned_lob_streams_unchanged()
+    {
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, 'blob contents');
+        rewind($stream);
+
+        $pdo = new Oci8ConnectionTestMockPDO;
+        $pdo->driverName = 'oci';
+        $pdo->statement->fetchAllResult = [(object) ['data' => $stream]];
+        $connection = new Oci8Connection($pdo);
+
+        $result = $connection->select('select data from blobs');
+
+        $this->assertSame($stream, $result[0]->data);
+        $this->assertSame('blob contents', stream_get_contents($result[0]->data));
+    }
+
     protected function getMockConnection($methods = [], $pdo = null)
     {
         $pdo = $pdo ?: new DatabaseConnectionTestMockPDO;
@@ -214,6 +281,8 @@ class DatabaseConnectionTestMockPDO extends PDO
 
 class Oci8ConnectionTestMockPDO extends PDO
 {
+    public string $driverName = 'mock';
+
     public ?string $lastPreparedSql = null;
 
     public ?PDOException $prepareException = null;
@@ -235,11 +304,22 @@ class Oci8ConnectionTestMockPDO extends PDO
 
         return $this->statement;
     }
+
+    public function getAttribute(int $attribute): mixed
+    {
+        return $attribute === PDO::ATTR_DRIVER_NAME ? $this->driverName : null;
+    }
 }
 
 class Oci8ConnectionTestMockPDOStatement extends PDOStatement
 {
     public bool $executed = false;
+
+    public array $boundParams = [];
+
+    public array $boundValues = [];
+
+    public array $fetchAllResult = [];
 
     public function __construct(private ?object $fetchResult = null) {}
 
@@ -253,6 +333,41 @@ class Oci8ConnectionTestMockPDOStatement extends PDOStatement
     public function fetch(int $mode = PDO::FETCH_DEFAULT, int $cursorOrientation = PDO::FETCH_ORI_NEXT, int $cursorOffset = 0): mixed
     {
         return $this->fetchResult;
+    }
+
+    public function fetchAll(int $mode = PDO::FETCH_DEFAULT, mixed ...$args): array
+    {
+        return $this->fetchAllResult;
+    }
+
+    public function bindParam(
+        string|int $param,
+        mixed &$var,
+        int $type = PDO::PARAM_STR,
+        int $maxLength = 0,
+        mixed $driverOptions = null
+    ): bool {
+        $this->boundParams[] = [
+            'parameter' => $param,
+            'value' => $var,
+            'type' => $type,
+            'length' => $maxLength,
+            'driver_options' => $driverOptions,
+            'argument_count' => func_num_args(),
+        ];
+
+        return true;
+    }
+
+    public function bindValue(string|int $param, mixed $value, int $type = PDO::PARAM_STR): bool
+    {
+        $this->boundValues[] = [
+            'parameter' => $param,
+            'value' => $value,
+            'type' => $type,
+        ];
+
+        return true;
     }
 
     public function setFetchMode(int $mode, mixed ...$args): true

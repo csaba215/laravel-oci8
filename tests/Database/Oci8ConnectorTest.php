@@ -4,6 +4,7 @@ namespace Yajra\Oci8\Tests\Database;
 
 use Illuminate\Database\Connectors\Connector;
 use Mockery as m;
+use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Yajra\Oci8\Connectors\OracleConnector;
@@ -35,6 +36,27 @@ class Oci8ConnectorTest extends TestCase
         ];
         $oci8 = $connector->createConnection($tns, $config, []);
         $this->assertInstanceOf(Oci8::class, $oci8);
+    }
+
+    public function test_create_connection_with_native_pdo_oci()
+    {
+        $connector = new NativePdoOracleConnectorStub;
+        $connection = $connector->createConnection('database-connection-string', [
+            'driver' => 'oracle',
+            'pdo' => 'pdo_oci',
+            'username' => 'username',
+            'password' => 'password',
+            'charset' => 'AL32UTF8',
+        ], [
+            PDO::ATTR_CASE => PDO::CASE_LOWER,
+            'session_mode' => 1,
+        ]);
+
+        $this->assertInstanceOf(NativePdoStub::class, $connection);
+        $this->assertSame('oci:dbname=database-connection-string;charset=AL32UTF8', $connector->dsn);
+        $this->assertSame('username', $connector->username);
+        $this->assertSame('password', $connector->password);
+        $this->assertSame([PDO::ATTR_CASE => PDO::CASE_LOWER], $connector->recordedOptions);
     }
 
     public function test_option_resolution()
@@ -333,4 +355,30 @@ class Oci8Stub extends Oci8
     {
         return true;
     }
+}
+
+class NativePdoOracleConnectorStub extends OracleConnector
+{
+    public string $dsn;
+
+    public ?string $username;
+
+    public ?string $password;
+
+    public array $recordedOptions;
+
+    protected function createPdoConnection($dsn, $username, #[\SensitiveParameter] $password, $options): PDO|Oci8
+    {
+        $this->dsn = $dsn;
+        $this->username = $username;
+        $this->password = $password;
+        $this->recordedOptions = $options;
+
+        return new NativePdoStub;
+    }
+}
+
+class NativePdoStub extends PDO
+{
+    public function __construct() {}
 }
