@@ -1274,11 +1274,14 @@ class OracleGrammar extends Grammar
 
     protected function compileJsonLength($column, $operator, $value)
     {
-        [$field, $path] = $this->wrapJsonFieldAndPath($column);
+        $parts = explode('->', $column, 2);
+        $field = $this->wrap($parts[0]);
 
-        $jsonPath = $path ?: '$[*]';
+        $jsonPath = count($parts) > 1
+            ? $this->wrapJsonPath($parts[1].'[*]', '->')
+            : "'$[*]'";
 
-        return '(SELECT COUNT(*) FROM JSON_TABLE('.$field.', \''.$jsonPath.'\' COLUMNS (val PATH \'$\')) ) '.$operator.' '.$value;
+        return '(SELECT COUNT(*) FROM JSON_TABLE('.$field.', '.$jsonPath.' COLUMNS (val PATH \'$\')) ) '.$operator.' '.$value;
     }
 
     /**

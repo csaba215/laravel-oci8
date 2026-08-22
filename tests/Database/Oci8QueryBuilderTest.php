@@ -4137,10 +4137,10 @@ class Oci8QueryBuilderTest extends TestCase
         $builder = $this->getBuilder();
 
         $builder->from('json_test')
-            ->whereJsonLength('options.items', '=', 2);
+            ->whereJsonLength('options->items', '=', 2);
 
         $this->assertSame(
-            'select * from "JSON_TEST" where (SELECT COUNT(*) FROM JSON_TABLE("OPTIONS"."ITEMS", \'$[*]\' COLUMNS (val PATH \'$\')) ) = ?',
+            'select * from "JSON_TEST" where (SELECT COUNT(*) FROM JSON_TABLE("OPTIONS", \'$."items"[*]\' COLUMNS (val PATH \'$\')) ) = ?',
             $builder->toSql()
         );
 
@@ -4152,10 +4152,10 @@ class Oci8QueryBuilderTest extends TestCase
         $builder = $this->getBuilder();
 
         $builder->from('json_test')
-            ->whereJsonLength('options.data.subitems', '<', 10);
+            ->whereJsonLength('options->data->subitems', '<', 10);
 
         $this->assertSame(
-            'select * from "JSON_TEST" where (SELECT COUNT(*) FROM JSON_TABLE("OPTIONS"."DATA"."SUBITEMS", \'$[*]\' COLUMNS (val PATH \'$\')) ) < ?',
+            'select * from "JSON_TEST" where (SELECT COUNT(*) FROM JSON_TABLE("OPTIONS", \'$."data"."subitems"[*]\' COLUMNS (val PATH \'$\')) ) < ?',
             $builder->toSql()
         );
 
