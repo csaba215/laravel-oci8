@@ -5,11 +5,31 @@ namespace Yajra\Oci8\Query;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Collection;
+use Illuminate\Support\LazyCollection;
 use Yajra\Oci8\Query\Grammars\OracleGrammar;
 use Yajra\Oci8\Query\Processors\OracleProcessor;
 
 class OracleBuilder extends Builder
 {
+    /**
+     * Put the query's results in random order.
+     *
+     * @param  string|int  $seed
+     * @return $this
+     */
+    public function inRandomOrder($seed = '')
+    {
+        $orders = $this->unions ? 'unionOrders' : 'orders';
+
+        parent::inRandomOrder($seed);
+
+        $index = array_key_last($this->{$orders});
+        $this->{$orders}[$index]['randomSeed'] = $seed === '' || $seed === null ? null : (string) $seed;
+
+        return $this;
+    }
+
     /**
      * Insert a new record and get the value of the primary key.
      */
@@ -220,5 +240,80 @@ class OracleBuilder extends Builder
             ->cloneWithoutBindings($this->unions ? ['unionOrder'] : ['select', 'order'])
             ->setAggregate('count', $this->withoutSelectAliases($columns))
             ->get()->all();
+    }
+
+    /**
+     * Run the query as a select statement against the connection.
+     *
+     * @return array
+     */
+    protected function runSelect()
+    {
+        $sql = $this->toSql();
+
+        $this->seedRandomGenerator();
+
+        return $this->connection->select(
+            $sql, $this->getBindings(), ! $this->useWritePdo, $this->fetchUsing
+        );
+    }
+
+    /**
+     * Get a lazy collection for the given query.
+     *
+     * @return LazyCollection<int, \stdClass>
+     */
+    public function cursor()
+    {
+        if (is_null($this->columns)) {
+            $this->columns = ['*'];
+        }
+
+        return (new LazyCollection(function () {
+            $sql = $this->toSql();
+
+            $this->seedRandomGenerator();
+
+            yield from $this->connection->cursor(
+                $sql, $this->getBindings(), ! $this->useWritePdo, $this->fetchUsing
+            );
+        }))->map(function ($item) {
+            return $this->applyAfterQueryCallbacks(new Collection([$item]))->first();
+        })->reject(fn ($item) => is_null($item));
+    }
+
+    /**
+     * Seed Oracle's session random number generator when the query has a seed.
+     */
+    protected function seedRandomGenerator(): void
+    {
+        $seed = $this->randomOrderSeed();
+
+        if (is_null($seed)) {
+            return;
+        }
+
+        /** @var OracleGrammar $grammar */
+        $grammar = $this->grammar;
+
+        $this->connection->select(
+            $grammar->compileRandomSeed(), [$seed], ! $this->useWritePdo
+        );
+    }
+
+    /**
+     * Get the last seed attached to the query's random order clauses.
+     */
+    protected function randomOrderSeed(): ?string
+    {
+        $orders = array_merge($this->orders ?? [], $this->unionOrders ?? []);
+
+        foreach (array_reverse($orders) as $order) {
+            if (array_key_exists('randomSeed', $order) && ! is_null($order['randomSeed'])) {
+                return $order['randomSeed'];
+            }
+        }
+
+        return null;
     }
 }
