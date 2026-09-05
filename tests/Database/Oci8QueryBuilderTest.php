@@ -4021,6 +4021,61 @@ class Oci8QueryBuilderTest extends TestCase
         $this->assertEquals([0 => 'foo'], $builder->getBindings());
     }
 
+    public function test_seeded_random_order_seeds_the_connection_before_selecting()
+    {
+        $builder = $this->getBuilder();
+        $builder->getConnection()->shouldReceive('select')->once()
+            ->with('begin DBMS_RANDOM.SEED(CAST(? AS VARCHAR2(2000))); end;', ['users-for-today'], true)
+            ->ordered()
+            ->andReturn([]);
+        $builder->getConnection()->shouldReceive('select')->once()
+            ->with('select * from "USERS" order by DBMS_RANDOM.RANDOM', [], true, [])
+            ->ordered()
+            ->andReturn([]);
+        $builder->getProcessor()->shouldReceive('processSelect')->once()->andReturn([]);
+
+        $builder->from('users')->inRandomOrder('users-for-today')->get();
+    }
+
+    public function test_compiling_seeded_random_order_has_no_connection_side_effects()
+    {
+        $builder = $this->getBuilder();
+        $builder->select('*')->from('users')->inRandomOrder(1234);
+
+        $this->assertSame('select * from "USERS" order by DBMS_RANDOM.RANDOM', $builder->toSql());
+        $this->assertSame([], $builder->getBindings());
+    }
+
+    public function test_reordering_removes_the_random_seed()
+    {
+        $builder = $this->getBuilder();
+        $builder->getConnection()->shouldReceive('select')->once()
+            ->with('select * from "USERS" order by "NAME" asc', [], true, [])
+            ->andReturn([]);
+        $builder->getProcessor()->shouldReceive('processSelect')->once()->andReturn([]);
+
+        $builder->from('users')->inRandomOrder(1234)->reorder('name')->get();
+    }
+
+    public function test_seeded_random_order_seeds_the_connection_before_opening_a_cursor()
+    {
+        $builder = $this->getBuilder();
+        $builder->getConnection()->shouldReceive('select')->once()
+            ->with('begin DBMS_RANDOM.SEED(CAST(? AS VARCHAR2(2000))); end;', ['1234'], false)
+            ->ordered()
+            ->andReturn([]);
+        $builder->getConnection()->shouldReceive('cursor')->once()
+            ->with('select * from "USERS" order by DBMS_RANDOM.RANDOM', [], false, [])
+            ->ordered()
+            ->andReturn((function () {
+                yield (object) ['ID' => 1];
+            })());
+
+        $results = $builder->from('users')->inRandomOrder(1234)->useWritePdo()->cursor()->all();
+
+        $this->assertSame(1, $results[0]->ID);
+    }
+
     public function test_where_like_clause()
     {
         $builder = $this->getBuilder();

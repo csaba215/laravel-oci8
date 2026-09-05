@@ -196,6 +196,18 @@ This is the baseline, if no version is set, this version is assumed.
 ### 21c
 - Use native json type instead of clob in schema builder. ([#983](https://github.com/yajra/laravel-oci8/pull/983))
 
+## Seeded random ordering
+
+Pass an integer or string seed to Laravel's `inRandomOrder` method to get repeatable random ordering:
+
+```php
+$users = DB::table('users')
+    ->inRandomOrder('users-for-today')
+    ->get();
+```
+
+The Oracle connection is seeded immediately before the query runs. The same seed produces the same pseudo-random sequence when Oracle reads the rows in the same order. Calling `inRandomOrder()` without a seed keeps the usual unseeded behavior.
+
 ## Oracle Max Name Length
 
 By default, DB object name are limited to 30 characters. To increase the limit, you can set the `ORA_MAX_NAME_LEN=128` in your `.env` file.

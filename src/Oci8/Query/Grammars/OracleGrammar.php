@@ -1147,6 +1147,14 @@ class OracleGrammar extends Grammar
     }
 
     /**
+     * Compile the statement used to seed Oracle's random number generator.
+     */
+    public function compileRandomSeed(): string
+    {
+        return 'begin DBMS_RANDOM.SEED(CAST(? AS VARCHAR2(2000))); end;';
+    }
+
+    /**
      * Compile a query to get the number of open connections for the database.
      */
     public function compileThreadCount(): string

@@ -113,6 +113,15 @@ class QueryBuilderTest extends TestCase
     }
 
     #[Test]
+    public function it_can_repeat_random_ordering_with_a_seed()
+    {
+        $firstOrder = $this->getConnection()->table('users')->inRandomOrder(1234)->pluck('id')->all();
+        $secondOrder = $this->getConnection()->table('users')->inRandomOrder(1234)->pluck('id')->all();
+
+        $this->assertSame($firstOrder, $secondOrder);
+    }
+
+    #[Test]
     public function it_can_insert_and_get_id()
     {
         $lastId = $this->getConnection()->table('users')->max('id');
