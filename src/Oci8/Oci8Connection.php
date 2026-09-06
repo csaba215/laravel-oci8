@@ -198,6 +198,33 @@ class Oci8Connection extends Connection
     }
 
     /**
+     * Run a select statement against the database.
+     */
+    public function select($query, $bindings = [], $useReadPdo = true, array $fetchUsing = [])
+    {
+        return $this->run($query, $bindings, function ($query, $bindings) use ($useReadPdo, $fetchUsing) {
+            if ($this->pretending()) {
+                return [];
+            }
+
+            $pdo = $this->getPdoForSelect($useReadPdo);
+            $statement = $this->prepared($pdo->prepare($query));
+
+            $this->bindValues($statement, $this->prepareBindings($bindings));
+
+            $statement->execute();
+
+            $results = $statement->fetchAll(...$fetchUsing);
+
+            if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'oci') {
+                return $results;
+            }
+
+            return $this->convertCharacterLobStreams($statement, $results);
+        });
+    }
+
+    /**
      * Set oracle session date format.
      */
     public function setDateFormat(string $format = 'YYYY-MM-DD HH24:MI:SS'): static
@@ -545,6 +572,83 @@ class Oci8Connection extends Connection
 
             $statement->bindValue(is_string($key) ? $key : $key + 1, $value, $type);
         }
+    }
+
+    /**
+     * Convert native PDO OCI character LOB streams to strings.
+     */
+    private function convertCharacterLobStreams(PDOStatement $statement, array $results): array
+    {
+        $columns = [];
+        $columnCount = $statement->columnCount();
+
+        for ($index = 0; $index < $columnCount; $index++) {
+            $metadata = $statement->getColumnMeta($index);
+            $declaredType = strtoupper((string) ($metadata['oci:decl_type'] ?? $metadata['native_type'] ?? ''));
+
+            if (str_ends_with($declaredType, 'CLOB')) {
+                $columns[$index] = $metadata['name'] ?? null;
+            }
+        }
+
+        foreach ($results as &$result) {
+            $keys = array_keys(is_object($result) ? get_object_vars($result) : (is_array($result) ? $result : []));
+
+            foreach ($columns as $index => $name) {
+                $columnKeys = $this->resolveColumnKeys($result, $keys, $index, $name);
+
+                if ($columnKeys === []) {
+                    if ($columnCount === 1 && is_resource($result) && get_resource_type($result) === 'stream') {
+                        $result = stream_get_contents($result);
+                    }
+
+                    continue;
+                }
+
+                foreach ($columnKeys as $key) {
+                    $value = is_object($result) ? $result->{$key} : $result[$key];
+
+                    if (! is_resource($value) || get_resource_type($value) !== 'stream') {
+                        continue;
+                    }
+
+                    $value = stream_get_contents($value);
+
+                    if (is_object($result)) {
+                        $result->{$key} = $value;
+                    } else {
+                        $result[$key] = $value;
+                    }
+                }
+            }
+        }
+        unset($result);
+
+        return $results;
+    }
+
+    /**
+     * Resolve fetched row keys from column metadata and position.
+     */
+    private function resolveColumnKeys(mixed $result, array $keys, int $index, mixed $name): array
+    {
+        $columnKeys = [];
+
+        foreach ($keys as $key) {
+            if (is_string($name) && is_string($key) && strcasecmp($key, $name) === 0) {
+                $columnKeys[] = $key;
+            }
+        }
+
+        if (is_array($result) && array_key_exists($index, $result)) {
+            $columnKeys[] = $index;
+        }
+
+        if ($columnKeys === [] && array_key_exists($index, $keys)) {
+            $columnKeys[] = $keys[$index];
+        }
+
+        return array_unique($columnKeys, SORT_REGULAR);
     }
 
     private function isNativePdoOci(): bool
