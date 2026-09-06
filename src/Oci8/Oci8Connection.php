@@ -35,13 +35,6 @@ class Oci8Connection extends Connection
     protected string $schemaPrefix = '';
 
     /**
-     * Keep native PDO OCI long string bindings alive until their statement executes.
-     *
-     * @var array<int|string, string>
-     */
-    protected array $nativePdoOciLongStringBindings = [];
-
-    /**
      * @param  PDO|\Closure  $pdo
      * @param  string  $database
      * @param  string  $tablePrefix
@@ -557,27 +550,10 @@ class Oci8Connection extends Connection
      */
     public function bindValues($statement, $bindings): void
     {
-        $this->nativePdoOciLongStringBindings = [];
-
         foreach ($bindings as $key => $value) {
-            $type = PDO::PARAM_STR;
-
-            if (is_string($value) && strlen($value) > 3999) {
-                if ($this->isNativePdoOci()) {
-                    $parameter = is_string($key) ? $key : $key + 1;
-                    $this->nativePdoOciLongStringBindings[$parameter] = $value;
-                    $statement->bindParam(
-                        $parameter,
-                        $this->nativePdoOciLongStringBindings[$parameter],
-                        PDO::PARAM_STR,
-                        strlen($value)
-                    );
-
-                    continue;
-                }
-
-                $type = SQLT_CLOB;
-            }
+            $type = is_string($value) && strlen($value) > 3999
+                ? SQLT_CLOB
+                : PDO::PARAM_STR;
 
             $statement->bindValue(is_string($key) ? $key : $key + 1, $value, $type);
         }

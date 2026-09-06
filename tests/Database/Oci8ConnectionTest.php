@@ -226,8 +226,12 @@ class Oci8ConnectionTest extends TestCase
         $this->assertSame(4, $pdo->statement->boundParams[0]['argument_count']);
     }
 
-    public function test_native_pdo_oci_binds_long_strings_with_their_length()
+    public function test_native_pdo_oci_binds_long_strings_as_clobs()
     {
+        if (! defined('SQLT_CLOB')) {
+            define('SQLT_CLOB', 112);
+        }
+
         $pdo = new Oci8ConnectionTestMockPDO;
         $pdo->driverName = 'oci';
         $connection = new Oci8Connection($pdo);
@@ -235,12 +239,11 @@ class Oci8ConnectionTest extends TestCase
 
         $connection->bindValues($pdo->statement, [$value]);
 
-        $binding = $pdo->statement->boundParams[0];
+        $binding = $pdo->statement->boundValues[0];
         $this->assertSame(1, $binding['parameter']);
-        $this->assertSame(PDO::PARAM_STR, $binding['type']);
-        $this->assertSame(4000, $binding['length']);
+        $this->assertSame(constant('SQLT_CLOB'), $binding['type']);
         $this->assertSame($value, $binding['value']);
-        $this->assertSame([], $pdo->statement->boundValues);
+        $this->assertSame([], $pdo->statement->boundParams);
     }
 
     public function test_native_pdo_oci_converts_character_lob_streams_to_strings_and_leaves_blobs_unchanged()
