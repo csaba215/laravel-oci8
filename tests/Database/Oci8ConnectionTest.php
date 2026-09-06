@@ -243,21 +243,40 @@ class Oci8ConnectionTest extends TestCase
         $this->assertSame([], $pdo->statement->boundValues);
     }
 
-    public function test_native_pdo_oci_leaves_returned_lob_streams_unchanged()
+    public function test_native_pdo_oci_converts_character_lob_streams_to_strings_and_leaves_blobs_unchanged()
     {
-        $stream = fopen('php://temp', 'r+');
-        fwrite($stream, 'blob contents');
-        rewind($stream);
+        $clob = fopen('php://temp', 'r+');
+        fwrite($clob, 'clob contents');
+        rewind($clob);
+
+        $nclob = fopen('php://temp', 'r+');
+        fwrite($nclob, 'nclob contents');
+        rewind($nclob);
+
+        $blob = fopen('php://temp', 'r+');
+        fwrite($blob, 'blob contents');
+        rewind($blob);
 
         $pdo = new Oci8ConnectionTestMockPDO;
         $pdo->driverName = 'oci';
-        $pdo->statement->fetchAllResult = [(object) ['data' => $stream]];
+        $pdo->statement->columnMeta = [
+            ['name' => 'text_data', 'native_type' => 'CLOB'],
+            ['name' => 'national_text_data', 'oci:decl_type' => 'NCLOB'],
+            ['name' => 'binary_data', 'native_type' => 'BLOB'],
+        ];
+        $pdo->statement->fetchAllResult = [(object) [
+            'text_data' => $clob,
+            'national_text_data' => $nclob,
+            'binary_data' => $blob,
+        ]];
         $connection = new Oci8Connection($pdo);
 
-        $result = $connection->select('select data from blobs');
+        $result = $connection->select('select text_data, national_text_data, binary_data from lobs');
 
-        $this->assertSame($stream, $result[0]->data);
-        $this->assertSame('blob contents', stream_get_contents($result[0]->data));
+        $this->assertSame('clob contents', $result[0]->text_data);
+        $this->assertSame('nclob contents', $result[0]->national_text_data);
+        $this->assertSame($blob, $result[0]->binary_data);
+        $this->assertSame('blob contents', stream_get_contents($result[0]->binary_data));
     }
 
     protected function getMockConnection($methods = [], $pdo = null)
@@ -321,6 +340,8 @@ class Oci8ConnectionTestMockPDOStatement extends PDOStatement
 
     public array $fetchAllResult = [];
 
+    public array $columnMeta = [];
+
     public function __construct(private ?object $fetchResult = null) {}
 
     public function execute(?array $params = null): bool
@@ -338,6 +359,16 @@ class Oci8ConnectionTestMockPDOStatement extends PDOStatement
     public function fetchAll(int $mode = PDO::FETCH_DEFAULT, mixed ...$args): array
     {
         return $this->fetchAllResult;
+    }
+
+    public function columnCount(): int
+    {
+        return count($this->columnMeta);
+    }
+
+    public function getColumnMeta(int $column): array|false
+    {
+        return $this->columnMeta[$column] ?? false;
     }
 
     public function bindParam(
