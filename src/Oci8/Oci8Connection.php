@@ -214,13 +214,25 @@ class Oci8Connection extends Connection
 
             $statement->execute();
 
-            $results = $statement->fetchAll(...$fetchUsing);
-
             if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'oci') {
-                return $results;
+                return $statement->fetchAll(...$fetchUsing);
             }
 
-            return $this->convertCharacterLobStreams($statement, $results);
+            $columns = $this->getCharacterLobColumns($statement);
+
+            if ($columns === []) {
+                return $statement->fetchAll(...$fetchUsing);
+            }
+
+            $results = [];
+
+            // PDO OCI reuses its LOB locator when advancing the statement, so each
+            // character LOB must be consumed before the next row is fetched.
+            while (($result = $statement->fetch(...$fetchUsing)) !== false) {
+                $results[] = $this->convertCharacterLobStreams($result, $columns, $statement->columnCount());
+            }
+
+            return $results;
         });
     }
 
@@ -575,14 +587,13 @@ class Oci8Connection extends Connection
     }
 
     /**
-     * Convert native PDO OCI character LOB streams to strings.
+     * Get the native PDO OCI character LOB columns.
      */
-    private function convertCharacterLobStreams(PDOStatement $statement, array $results): array
+    private function getCharacterLobColumns(PDOStatement $statement): array
     {
         $columns = [];
-        $columnCount = $statement->columnCount();
 
-        for ($index = 0; $index < $columnCount; $index++) {
+        for ($index = 0; $index < $statement->columnCount(); $index++) {
             $metadata = $statement->getColumnMeta($index);
             $declaredType = strtoupper((string) ($metadata['oci:decl_type'] ?? $metadata['native_type'] ?? ''));
 
@@ -591,40 +602,45 @@ class Oci8Connection extends Connection
             }
         }
 
-        foreach ($results as &$result) {
-            $keys = array_keys(is_object($result) ? get_object_vars($result) : (is_array($result) ? $result : []));
+        return $columns;
+    }
 
-            foreach ($columns as $index => $name) {
-                $columnKeys = $this->resolveColumnKeys($result, $keys, $index, $name);
+    /**
+     * Convert native PDO OCI character LOB streams in a fetched row to strings.
+     */
+    private function convertCharacterLobStreams(mixed $result, array $columns, int $columnCount): mixed
+    {
+        $keys = array_keys(is_object($result) ? get_object_vars($result) : (is_array($result) ? $result : []));
 
-                if ($columnKeys === []) {
-                    if ($columnCount === 1 && is_resource($result) && get_resource_type($result) === 'stream') {
-                        $result = stream_get_contents($result);
-                    }
+        foreach ($columns as $index => $name) {
+            $columnKeys = $this->resolveColumnKeys($result, $keys, $index, $name);
 
+            if ($columnKeys === []) {
+                if ($columnCount === 1 && is_resource($result) && get_resource_type($result) === 'stream') {
+                    $result = stream_get_contents($result);
+                }
+
+                continue;
+            }
+
+            foreach ($columnKeys as $key) {
+                $value = is_object($result) ? $result->{$key} : $result[$key];
+
+                if (! is_resource($value) || get_resource_type($value) !== 'stream') {
                     continue;
                 }
 
-                foreach ($columnKeys as $key) {
-                    $value = is_object($result) ? $result->{$key} : $result[$key];
+                $value = stream_get_contents($value);
 
-                    if (! is_resource($value) || get_resource_type($value) !== 'stream') {
-                        continue;
-                    }
-
-                    $value = stream_get_contents($value);
-
-                    if (is_object($result)) {
-                        $result->{$key} = $value;
-                    } else {
-                        $result[$key] = $value;
-                    }
+                if (is_object($result)) {
+                    $result->{$key} = $value;
+                } else {
+                    $result[$key] = $value;
                 }
             }
         }
-        unset($result);
 
-        return $results;
+        return $result;
     }
 
     /**
