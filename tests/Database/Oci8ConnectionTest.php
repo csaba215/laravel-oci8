@@ -226,7 +226,7 @@ class Oci8ConnectionTest extends TestCase
         $this->assertSame(4, $pdo->statement->boundParams[0]['argument_count']);
     }
 
-    public function test_native_pdo_oci_binds_long_strings_as_lob_streams()
+    public function test_native_pdo_oci_binds_long_strings_with_their_length()
     {
         $pdo = new Oci8ConnectionTestMockPDO;
         $pdo->driverName = 'oci';
@@ -237,9 +237,9 @@ class Oci8ConnectionTest extends TestCase
 
         $binding = $pdo->statement->boundParams[0];
         $this->assertSame(1, $binding['parameter']);
-        $this->assertSame(PDO::PARAM_LOB, $binding['type']);
-        $this->assertIsResource($binding['value']);
-        $this->assertSame($value, stream_get_contents($binding['value']));
+        $this->assertSame(PDO::PARAM_STR, $binding['type']);
+        $this->assertSame(4000, $binding['length']);
+        $this->assertSame($value, $binding['value']);
         $this->assertSame([], $pdo->statement->boundValues);
     }
 

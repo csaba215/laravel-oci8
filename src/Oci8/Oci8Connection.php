@@ -35,11 +35,11 @@ class Oci8Connection extends Connection
     protected string $schemaPrefix = '';
 
     /**
-     * Keep native PDO OCI LOB streams alive until their statement executes.
+     * Keep native PDO OCI long string bindings alive until their statement executes.
      *
-     * @var array<int|string, resource>
+     * @var array<int|string, string>
      */
-    protected array $nativePdoOciLobResources = [];
+    protected array $nativePdoOciLongStringBindings = [];
 
     /**
      * @param  PDO|\Closure  $pdo
@@ -557,23 +557,20 @@ class Oci8Connection extends Connection
      */
     public function bindValues($statement, $bindings): void
     {
-        $this->nativePdoOciLobResources = [];
+        $this->nativePdoOciLongStringBindings = [];
 
         foreach ($bindings as $key => $value) {
             $type = PDO::PARAM_STR;
 
             if (is_string($value) && strlen($value) > 3999) {
                 if ($this->isNativePdoOci()) {
-                    $stream = fopen('php://temp', 'r+');
-                    fwrite($stream, $value);
-                    rewind($stream);
-
                     $parameter = is_string($key) ? $key : $key + 1;
-                    $this->nativePdoOciLobResources[$parameter] = $stream;
+                    $this->nativePdoOciLongStringBindings[$parameter] = $value;
                     $statement->bindParam(
                         $parameter,
-                        $this->nativePdoOciLobResources[$parameter],
-                        PDO::PARAM_LOB
+                        $this->nativePdoOciLongStringBindings[$parameter],
+                        PDO::PARAM_STR,
+                        strlen($value)
                     );
 
                     continue;
