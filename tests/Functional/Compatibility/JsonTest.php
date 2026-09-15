@@ -5,8 +5,11 @@ namespace Yajra\Oci8\Tests\Functional\Compatibility;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PDO;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
+use Throwable;
 use Yajra\Oci8\Tests\TestCase;
 
 class JsonTest extends TestCase
@@ -216,6 +219,68 @@ class JsonTest extends TestCase
             $this->assertEquals([1], $overlaps->pluck('id')->all());
             $this->assertSame([$longValue], json_decode($overlaps->first()->options, true));
         }
+    }
+
+    #[Test]
+    #[DataProvider('clobQueryCases')]
+    public function it_releases_clob_query_resources(string $predicate, bool $fetchClob): void
+    {
+        $connection = DB::connection();
+
+        if ($connection->getDriverName() !== 'oracle' || $connection->isVersionBelow('12c')) {
+            $this->markTestSkipped('CLOB query diagnostics require Oracle 12c or newer.');
+        }
+
+        $longValue = str_repeat('x', 5000);
+        $document = json_encode([$longValue]);
+
+        DB::table('json_test')->insert(['id' => 1, 'options' => $document]);
+        DB::table('json_test')->insert(['id' => 2, 'options' => json_encode([str_repeat('x', 4999).'y'])]);
+
+        $query = DB::table('json_test')->select($fetchClob ? ['id', 'options'] : ['id']);
+
+        match ($predicate) {
+            'id' => $query->where('id', 1),
+            'clob' => $query->whereRaw('DBMS_LOB.COMPARE("OPTIONS", ?) = 0', [$document]),
+            'json' => $query->whereJsonContains('options', $longValue),
+            'json_without_clob_binding' => $query->whereJsonContains('options', DB::raw("TO_CLOB(RPAD('x', 2500, 'x')) || TO_CLOB(RPAD('x', 2500, 'x'))")),
+        };
+
+        // Keep the statement alive so failures identify execution, fetching, or cleanup.
+        $phase = 'prepare';
+
+        try {
+            $statement = $connection->getPdo()->prepare($query->toSql());
+            $phase = 'bind';
+            $connection->bindValues($statement, $connection->prepareBindings($query->getBindings()));
+            $phase = 'execute';
+            $statement->execute();
+            $phase = 'fetch';
+            $rows = $statement->fetchAll(PDO::FETCH_OBJ);
+            $phase = 'statement release';
+            unset($statement);
+        } catch (Throwable $e) {
+            throw new RuntimeException("CLOB query failed during {$phase}.", 0, $e);
+        }
+
+        $this->assertCount(1, $rows);
+        $this->assertEquals(1, $rows[0]->id);
+
+        if ($fetchClob) {
+            $this->assertSame([$longValue], json_decode($rows[0]->options, true));
+        }
+    }
+
+    public static function clobQueryCases(): array
+    {
+        return [
+            'fetch CLOB without CLOB binding' => ['id', true],
+            'compare CLOB and fetch ID' => ['clob', false],
+            'compare CLOB and fetch CLOB' => ['clob', true],
+            'compare JSON and fetch ID' => ['json', false],
+            'compare JSON and fetch CLOB' => ['json', true],
+            'compare JSON and fetch CLOB without CLOB binding' => ['json_without_clob_binding', true],
+        ];
     }
 
     #[Test]

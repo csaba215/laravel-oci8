@@ -179,6 +179,10 @@ jobs:
           echo
           echo "Composer:"
           composer --version
+          echo "PDO OCI8 package version and source reference:"
+          composer show yajra/laravel-pdo-via-oci8
+          echo "OCI8 extension and Oracle client versions:"
+          php --ri oci8
           echo
           echo "Oracle database version:"
           if [ "${{ matrix.oracle }}" = "11g" ]; then
