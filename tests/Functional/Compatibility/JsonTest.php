@@ -194,6 +194,10 @@ class JsonTest extends TestCase
             'options' => json_encode(['short']),
         ]);
 
+        DB::table('json_test')->insert([
+            'options' => json_encode([str_repeat('x', 4999).'y']),
+        ]);
+
         $contains = DB::table('json_test')
             ->whereJsonContains('options', $longValue)
             ->get();

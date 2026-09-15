@@ -1240,9 +1240,12 @@ class OracleGrammar extends Grammar
     protected function whereJsonContains(Builder $query, $where): string
     {
         $not = $where['not'] ? 'NOT ' : '';
-        $values = is_array($where['value'])
-            ? array_map(fn ($value) => $this->parameter($value), $where['value'])
-            : [$this->parameter($where['value'])];
+        $values = array_map(
+            fn ($value) => is_string($value) && strlen($value) > 3999
+                ? $this->parameter($value)
+                : 'TO_CLOB('.$this->parameter($value).')',
+            is_array($where['value']) ? $where['value'] : [$where['value']]
+        );
 
         return $not.$this->compileJsonContains(
             $where['column'],
@@ -1272,7 +1275,7 @@ class OracleGrammar extends Grammar
 
         $jsonTable = $this->compileJsonArrayTable($column);
         $conditions = array_map(
-            fn ($value) => 'EXISTS (SELECT 1 FROM '.$jsonTable.' jt WHERE DBMS_LOB.COMPARE(jt.value, TO_CLOB('.$value.')) = 0)',
+            fn ($value) => 'EXISTS (SELECT 1 FROM '.$jsonTable.' jt WHERE DBMS_LOB.COMPARE(jt.value, '.$value.') = 0)',
             $values
         );
 
@@ -1291,9 +1294,12 @@ class OracleGrammar extends Grammar
     protected function whereJsonOverlaps(Builder $query, $where): string
     {
         $not = $where['not'] ? 'NOT ' : '';
-        $values = is_array($where['value'])
-            ? array_map(fn ($value) => $this->parameter($value), $where['value'])
-            : [$this->parameter($where['value'])];
+        $values = array_map(
+            fn ($value) => is_string($value) && strlen($value) > 3999
+                ? $this->parameter($value)
+                : 'TO_CLOB('.$this->parameter($value).')',
+            is_array($where['value']) ? $where['value'] : [$where['value']]
+        );
 
         return $not.$this->compileJsonOverlaps(
             $where['column'],
@@ -1322,7 +1328,7 @@ class OracleGrammar extends Grammar
         }
 
         $conditions = array_map(
-            fn ($value) => 'DBMS_LOB.COMPARE(jt.value, TO_CLOB('.$value.')) = 0',
+            fn ($value) => 'DBMS_LOB.COMPARE(jt.value, '.$value.') = 0',
             $values
         );
 

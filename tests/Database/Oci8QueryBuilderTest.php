@@ -3974,6 +3974,43 @@ class Oci8QueryBuilderTest extends TestCase
         $this->assertEquals([], $builder->getBindings());
     }
 
+    public function test_json_comparisons_use_automatically_bound_clobs_directly()
+    {
+        foreach (['whereJsonContains', 'whereJsonOverlaps'] as $method) {
+            foreach ([str_repeat('x', 4000), str_repeat('x', 5000), str_repeat('é', 2000)] as $value) {
+                $builder = $this->getBuilder(serverVersion: '21c');
+                $builder->from('users')->{$method}('options', $value);
+
+                $this->assertSame('select * from "USERS" where EXISTS (SELECT 1 FROM JSON_TABLE("OPTIONS", \'$[*]\' COLUMNS (value CLOB PATH \'$\')) jt WHERE DBMS_LOB.COMPARE(jt.value, ?) = 0)', $builder->toSql());
+                $this->assertSame([$value], $builder->getBindings());
+            }
+
+            $builder = $this->getBuilder(serverVersion: '21c');
+            $value = str_repeat('x', 3999);
+            $builder->from('users')->{$method}('options', $value);
+
+            $this->assertSame('select * from "USERS" where EXISTS (SELECT 1 FROM JSON_TABLE("OPTIONS", \'$[*]\' COLUMNS (value CLOB PATH \'$\')) jt WHERE DBMS_LOB.COMPARE(jt.value, TO_CLOB(?)) = 0)', $builder->toSql());
+            $this->assertSame([$value], $builder->getBindings());
+        }
+    }
+
+    public function test_json_comparisons_with_mixed_string_and_clob_bindings()
+    {
+        $value = str_repeat('x', 5000);
+
+        $builder = $this->getBuilder(serverVersion: '21c');
+        $builder->from('users')->where('id', 1)->whereJsonContains('options', ['short', $value]);
+
+        $this->assertSame('select * from "USERS" where "ID" = ? and (EXISTS (SELECT 1 FROM JSON_TABLE("OPTIONS", \'$[*]\' COLUMNS (value CLOB PATH \'$\')) jt WHERE DBMS_LOB.COMPARE(jt.value, TO_CLOB(?)) = 0) AND EXISTS (SELECT 1 FROM JSON_TABLE("OPTIONS", \'$[*]\' COLUMNS (value CLOB PATH \'$\')) jt WHERE DBMS_LOB.COMPARE(jt.value, ?) = 0))', $builder->toSql());
+        $this->assertSame([1, 'short', $value], $builder->getBindings());
+
+        $builder = $this->getBuilder(serverVersion: '21c');
+        $builder->from('users')->where('id', 1)->orWhereJsonDoesntOverlap('options', [$value, 'short']);
+
+        $this->assertSame('select * from "USERS" where "ID" = ? or NOT EXISTS (SELECT 1 FROM JSON_TABLE("OPTIONS", \'$[*]\' COLUMNS (value CLOB PATH \'$\')) jt WHERE DBMS_LOB.COMPARE(jt.value, ?) = 0 OR DBMS_LOB.COMPARE(jt.value, TO_CLOB(?)) = 0)', $builder->toSql());
+        $this->assertSame([1, $value, 'short'], $builder->getBindings());
+    }
+
     public function test_from_sub()
     {
         $builder = $this->getBuilder();
