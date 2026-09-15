@@ -187,29 +187,33 @@ class JsonTest extends TestCase
         $longValue = str_repeat('x', 5000);
 
         DB::table('json_test')->insert([
+            'id' => 1,
             'options' => json_encode([$longValue]),
         ]);
 
         DB::table('json_test')->insert([
+            'id' => 2,
             'options' => json_encode(['short']),
         ]);
 
         DB::table('json_test')->insert([
+            'id' => 3,
             'options' => json_encode([str_repeat('x', 4999).'y']),
         ]);
 
+        // Test matching without fetching the CLOB column through the OCI8 client.
         $contains = DB::table('json_test')
             ->whereJsonContains('options', $longValue)
-            ->get();
+            ->pluck('id');
 
-        $this->assertCount(1, $contains);
+        $this->assertEquals([1], $contains->all());
 
         if (DB::connection()->getDriverName() !== 'pgsql') {
             $overlaps = DB::table('json_test')
                 ->whereJsonOverlaps('options', [$longValue])
-                ->get();
+                ->pluck('id');
 
-            $this->assertCount(1, $overlaps);
+            $this->assertEquals([1], $overlaps->all());
         }
     }
 
