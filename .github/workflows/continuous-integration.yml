@@ -67,9 +67,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: |
-            # TODO: Remove this fork override after blob stream binding testing is complete.
+            # TODO: Remove this fork override after BLOB stream return testing is complete.
             composer config repositories.pdo-via-oci8 vcs https://github.com/csaba215/pdo-via-oci8.git
-            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/blob-stream-binding as 3.7.1"
+            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/return-blobs-as-stream as 3.7.1"
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
 
       - name: Install Oracle Instant Client tools
@@ -358,9 +358,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: |
-            # TODO: Remove this fork override after blob stream binding testing is complete.
+            # TODO: Remove this fork override after BLOB stream return testing is complete.
             composer config repositories.pdo-via-oci8 vcs https://github.com/csaba215/pdo-via-oci8.git
-            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/blob-stream-binding as 3.7.1"
+            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/return-blobs-as-stream as 3.7.1"
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
 
       - name: Initialize PostgreSQL (second_connection)
@@ -415,9 +415,9 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: |
-            # TODO: Remove this fork override after blob stream binding testing is complete.
+            # TODO: Remove this fork override after BLOB stream return testing is complete.
             composer config repositories.pdo-via-oci8 vcs https://github.com/csaba215/pdo-via-oci8.git
-            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/blob-stream-binding as 3.7.1"
+            composer require --no-update --no-interaction "yajra/laravel-pdo-via-oci8:dev-feature/return-blobs-as-stream as 3.7.1"
             composer update --${{ matrix.stability }} --prefer-dist --no-interaction --no-progress
 
       - name: Initialize MariaDB (second_connection)

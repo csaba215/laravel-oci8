@@ -49,10 +49,21 @@ class BlobFileTest extends TestCase
 
         $this->assertSame('payload.bin', $storedBlobFile->filename);
         $storedContents = $storedBlobFile->contents;
-        if (is_resource($storedContents)) {
-            rewind($storedContents);
-            $storedContents = stream_get_contents($storedContents);
+        if (! $this->isPgsql() && ! $this->isMariaDb()) {
+            $this->assertIsResource($storedContents);
+            $this->assertSame('stream', get_resource_type($storedContents));
         }
+
+        if (is_resource($storedContents)) {
+            $stream = $storedContents;
+            try {
+                $this->assertTrue(rewind($stream));
+                $storedContents = stream_get_contents($stream);
+            } finally {
+                fclose($stream);
+            }
+        }
+
         $this->assertIsString($storedContents);
         $this->assertSame(strlen($contents), strlen($storedContents));
         $this->assertSame(hash('sha256', $contents), hash('sha256', $storedContents));
@@ -81,10 +92,21 @@ class BlobFileTest extends TestCase
         $this->assertNotNull($storedBlobFile);
         $this->assertSame('inserted-payload.bin', $storedBlobFile->filename);
         $storedContents = $storedBlobFile->contents;
-        if (is_resource($storedContents)) {
-            rewind($storedContents);
-            $storedContents = stream_get_contents($storedContents);
+        if (! $this->isPgsql() && ! $this->isMariaDb()) {
+            $this->assertIsResource($storedContents);
+            $this->assertSame('stream', get_resource_type($storedContents));
         }
+
+        if (is_resource($storedContents)) {
+            $stream = $storedContents;
+            try {
+                $this->assertTrue(rewind($stream));
+                $storedContents = stream_get_contents($stream);
+            } finally {
+                fclose($stream);
+            }
+        }
+
         $this->assertIsString($storedContents);
         $this->assertSame(strlen($contents), strlen($storedContents));
         $this->assertSame(hash('sha256', $contents), hash('sha256', $storedContents));
@@ -115,10 +137,21 @@ class BlobFileTest extends TestCase
         $this->assertNotNull($storedBlobFile);
         $this->assertSame('short-payload.bin', $storedBlobFile->filename);
         $storedContents = $storedBlobFile->contents;
-        if (is_resource($storedContents)) {
-            rewind($storedContents);
-            $storedContents = stream_get_contents($storedContents);
+        if (! $this->isPgsql() && ! $this->isMariaDb()) {
+            $this->assertIsResource($storedContents);
+            $this->assertSame('stream', get_resource_type($storedContents));
         }
+
+        if (is_resource($storedContents)) {
+            $stream = $storedContents;
+            try {
+                $this->assertTrue(rewind($stream));
+                $storedContents = stream_get_contents($stream);
+            } finally {
+                fclose($stream);
+            }
+        }
+
         $this->assertIsString($storedContents);
         $this->assertSame(strlen($contents), strlen($storedContents));
         $this->assertSame(hash('sha256', $contents), hash('sha256', $storedContents));
@@ -158,6 +191,73 @@ class BlobFileTest extends TestCase
         $this->assertSame('large-payload.bin', $storedBlob['filename']);
         $this->assertSame(512 * 1024 * 1024, (int) $storedBlob['content_length']);
         $this->assertLessThanOrEqual(64 * 1024 * 1024, $memoryIncrease);
+    }
+
+    #[Test]
+    public function it_can_upload_and_download_a_1_gb_blob_as_a_stream_with_a_256_mb_memory_limit(): void
+    {
+        if ($this->isPgsql() || $this->isMariaDb()) {
+            $this->markTestSkipped('The large BLOB stream test is Oracle-specific.');
+        }
+
+        $previousMemoryLimit = ini_get('memory_limit');
+        $upload = $download = $blob = null;
+
+        try {
+            $this->assertNotFalse(ini_set('memory_limit', '256M'));
+            $this->assertSame('256M', ini_get('memory_limit'));
+            memory_reset_peak_usage();
+            $memoryBefore = memory_get_usage(true);
+
+            $upload = tmpfile();
+            $download = tmpfile();
+            $this->assertIsResource($upload);
+            $this->assertIsResource($download);
+
+            $fileSize = 1024 * 1024 * 1024;
+            $chunk = random_bytes(1024 * 1024);
+            $expectedHash = hash_init('sha256');
+
+            for ($written = 0; $written < $fileSize; $written += strlen($chunk)) {
+                $this->assertSame(strlen($chunk), fwrite($upload, $chunk));
+                hash_update($expectedHash, $chunk);
+            }
+            unset($chunk);
+            $this->assertTrue(rewind($upload));
+
+            $this->assertTrue(DB::table('blob_files')->insert([
+                'filename' => 'one-gb-payload.bin',
+                'contents' => $upload,
+            ]));
+
+            $storedBlobFile = DB::table('blob_files')
+                ->where('filename', 'one-gb-payload.bin')
+                ->first();
+
+            $this->assertNotNull($storedBlobFile);
+            $blob = $storedBlobFile->contents;
+            $this->assertIsResource($blob);
+            $this->assertSame('stream', get_resource_type($blob));
+            $this->assertSame(0, ftell($blob));
+            $this->assertSame($fileSize, stream_copy_to_stream($blob, $download));
+            $this->assertSame($fileSize, fstat($download)['size']);
+
+            $this->assertTrue(rewind($download));
+            $actualHash = hash_init('sha256');
+            $this->assertSame($fileSize, hash_update_stream($actualHash, $download));
+            $this->assertSame(hash_final($expectedHash), hash_final($actualHash));
+            $this->assertLessThanOrEqual(
+                64 * 1024 * 1024,
+                memory_get_peak_usage(true) - $memoryBefore
+            );
+        } finally {
+            foreach ([$blob, $download, $upload] as $stream) {
+                if (is_resource($stream)) {
+                    fclose($stream);
+                }
+            }
+            ini_set('memory_limit', $previousMemoryLimit);
+        }
     }
 }
 
