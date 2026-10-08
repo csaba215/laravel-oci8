@@ -43,6 +43,18 @@ Laravel-OCI8 is an Oracle Database Driver package for [Laravel](http://laravel.c
 composer require yajra/laravel-oci8:^13
 ```
 
+## Laravel Boost
+
+This package includes a `laravel-oci8-development` skill for [Laravel Boost](https://laravel.com/docs/boost#third-party-package-skills), covering Oracle configuration, queries, migrations, LOBs, and PL/SQL calls.
+
+In an application with Laravel Boost installed, run the following command and enable skills to install it for your selected AI agents:
+
+```bash
+php artisan boost:install
+```
+
+Run `php artisan boost:update` after package updates to refresh installed skills.
+
 ## Larastan / PHPStan
 
 This package includes an optional PHPStan/Larastan extension for OCI8-specific `DB` methods.
